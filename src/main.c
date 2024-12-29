@@ -30,21 +30,14 @@ int main(int argc, char ** argv)
 		}
 	}
 
-	if (!SourceFile)
-	{
-		printf("No Source File Provided\n");
-	}
-
+	if (!SourceFile) { aerror(); }
 	if (!OutputFile)
 	{
 		OutputFile = "out";
 	}
 
 	FILE * sourceFp = fopen(SourceFile,"r");
-	if (sourceFp == NULL)
-	{
-		return (1);
-	}
+	if (sourceFp == NULL) { aerror(); }
 
 	do
 	{
