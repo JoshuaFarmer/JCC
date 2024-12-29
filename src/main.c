@@ -42,10 +42,10 @@ int main(int argc, char ** argv)
 	/* get file length */
 	fseek(sourceFp, 0, SEEK_END);
 	int length=ftell(sourceFp);
-	rewind(sourceFp);
+	fseek(sourceFp, 0, SEEK_SET);
 
 	char * Buffer = malloc(length);
-	int read = fread(Buffer, length, 1, sourceFp);
+	int read = fread(Buffer, 1, length, sourceFp);
 	if (read != length)
 	{
 		printf("The Fuck???");
