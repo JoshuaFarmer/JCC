@@ -39,18 +39,22 @@ int main(int argc, char ** argv)
 	FILE * sourceFp = fopen(SourceFile,"r");
 	if (sourceFp == NULL) { aerror(); }
 
-	do
+	/* get file length */
+	fseek(sourceFp, 0, SEEK_END);
+	int length=ftell(sourceFp);
+	rewind(sourceFp);
+
+	char * Buffer = malloc(length);
+	int read = fread(Buffer, length, 1, sourceFp);
+	if (read != length)
 	{
-		char c = fgetc(sourceFp);
-		if (feof(sourceFp))
-		{
-			break;
-		}
-
-		printf("%c",c);
+		printf("The Fuck???");
+		return(1);
 	}
-	while (1);
 
+	printf("%s\n",Buffer);
+
+	free(Buffer);
 	fclose(sourceFp);
 	return(0);
 }
