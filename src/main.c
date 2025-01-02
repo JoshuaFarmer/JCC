@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include"tok.h"
+#include"expr.h"
 
 void aerror()
 {
