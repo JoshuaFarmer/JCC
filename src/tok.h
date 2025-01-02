@@ -155,6 +155,7 @@ void tokenise(const char *str)
 		}
 		else if (*str == '#')
 		{
+			++str;
 			char end = '\n';
 			buffer_index = 0;
 			while (*str != end && *str != '\0')
