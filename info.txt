@@ -1,1 +1,6 @@
 simple C compiler
+
+GOALS :
+
+i wish for Near ANSI C, or near K&C at least.
+or in other words, basic types, functions and maybe some preproccesor
