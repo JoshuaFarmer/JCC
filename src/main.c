@@ -54,6 +54,11 @@ int main(int argc, char ** argv)
 
 	printf("%s\n",Buffer);
 
+	const char *input = Buffer;
+	tokenise(input);
+	print_tokens();
+	delete_toks();
+
 	free(Buffer);
 	fclose(sourceFp);
 	return(0);

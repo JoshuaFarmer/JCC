@@ -1,2 +1,1 @@
 simple C compiler
-GOAL : self compilation
