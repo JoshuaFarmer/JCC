@@ -315,10 +315,13 @@ void expr()
                         {
                                 char name[sizeof(ident)];
                                 strcpy(name,ident);
+
+                                tmp = src;
                                 while (tok != '(') next();
-                                while (tok != ')') {expr();}
+                                while (tok != ')') next();
                                 if (typeofnext() == '{')
                                 {
+                                        src=tmp;
                                         fprintf(fo,"%s:\n",name);
                                         block();
                                         fprintf(fo,"RET\n");
@@ -326,6 +329,7 @@ void expr()
                                 }
                                 else
                                 {
+                                        src=tmp;
                                         fprintf(fo,"call %s\n",name);
                                         return;
                                 }
