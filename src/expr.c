@@ -201,6 +201,10 @@ void expr()
 
         switch (tok)
         {
+                case '{':
+                {
+                        block();
+                } break;
                 case TOK_IF:
                 {
                         start=1;
