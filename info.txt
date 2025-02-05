@@ -1,6 +1,8 @@
-simple C compiler
+simple C* compiler
 
 GOALS :
 
-i wish for Near ANSI C, or near K&C at least.
+i wish for Near ANSI C*, or near K&C* at least.
 or in other words, basic types, functions and maybe some preproccesor
+
+C* is my definition of "Almost C, Not quite, a bit different"
