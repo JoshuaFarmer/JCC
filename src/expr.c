@@ -169,7 +169,7 @@ void dumpvars()
         VAR * x = list;
         while (x != NULL)
         {
-                fprintf(fo,"sizeof(%s)==%d,const=%d,bpoff=%d\n",x->name,x->size,x->is_constant,x->bpoff);
+                printf("sizeof(%s)==%d,const=%d,bpoff=%d\n",x->name,x->size,x->is_constant,x->bpoff);
                 x=x->next;
         }
 }
@@ -293,12 +293,12 @@ void expr()
                         }
                         else if (v)
                         {
-                                fprintf(fo,"CAN'T ASSIGN TO CONSTANT: %s\n",ident);
+                                printf("CAN'T ASSIGN TO CONSTANT: %s\n",ident);
                                 exit(1);
                         }
                         else
                         {
-                                fprintf(fo,"VARIABLE NOT FOUND: %s\n",ident);
+                                printf("VARIABLE NOT FOUND: %s\n",ident);
                                 exit(1);
                         }
                 } break;
@@ -324,7 +324,7 @@ void expr()
                         }
                         else
                         {
-                                fprintf(fo,"VARIABLE NOT FOUND: %s\n",ident);
+                                printf("VARIABLE NOT FOUND: %s\n",ident);
                                 exit(1);
                         }
                 } break;
@@ -443,7 +443,7 @@ void expr()
 
                 default:
                 {
-                        fprintf(fo,"Unsupported Token: %d\n", tok);
+                        printf("Unsupported Token: %d\n", tok);
                 }
         }
 }
