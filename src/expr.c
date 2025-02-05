@@ -205,6 +205,14 @@ void expr()
                 {
                         block();
                 } break;
+                case TOK_RETURN:
+                {
+                        start=1;
+                        while (tok != ';' && tok)
+                                expr();
+                        printf("RET\n");
+                        break;
+                }
                 case TOK_IF:
                 {
                         start=1;

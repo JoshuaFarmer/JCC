@@ -1,5 +1,12 @@
-int z = 1;
-while (z)
+int a=0;
+int b=1;
+int c=0;
+int n=10;
+
+while (n)
 {
-        z = 0;
+        c=a+b;
+        a=b;
+        b=c;
+        n=n-1;
 }
