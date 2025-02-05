@@ -196,8 +196,12 @@ void expr()
                 } break;
                 case '=':
                 {
-                        expr();
-                        VAR * v = get_var(ident);
+                        start=1;
+                        char x[sizeof(ident)];
+                        strcpy(x,ident);
+                        while (tok != ';' && tok)
+                                expr();
+                        VAR * v = get_var(x);
                         if (v&&!(v->is_constant && v->assigned))
                         {
                                 switch(v->size)
@@ -221,14 +225,21 @@ void expr()
                 } break;
                 case TOK_IDE:
                 {
+                        char * tmp = src;
+                        int t = tok;
+                        next();
+                        int newTok=tok;
+                        src=tmp;
+                        tok=t;
+                        if (newTok=='=') return;
                         VAR * v = get_var(ident);
                         if (v)
                         {
                                 switch(v->size)
                                 {
-                                        case 4: printf("MOV E%cX,[EBP-%d]\n",(start)?'B':'A',v->bpoff); break;
-                                        case 2: printf("MOV %cX,[EBP-%d]\n",(start)?'B':'A',v->bpoff); break;
-                                        case 1: printf("MOV %cL,[EBP-%d]\n",(start)?'B':'A',v->bpoff); break;
+                                        case 4: printf("MOV E%cX,[EBP-%d]\n",(start)?'A':'B',v->bpoff); break;
+                                        case 2: printf("MOV %cX,[EBP-%d]\n",(start)?'A':'B',v->bpoff); break;
+                                        case 1: printf("MOV %cL,[EBP-%d]\n",(start)?'A':'B',v->bpoff); break;
                                 }
                                 start = 0;
                         }
