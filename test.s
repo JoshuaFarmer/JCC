@@ -1,4 +1,12 @@
+global _start
+_start:
+call main
+mov ebx,eax
+mov eax,1
+int 0x80
 main:
+PUSH EBP
+MOV EBP,ESP
 SUB ESP,4
 MOV EAX,1
 MOV [EBP-4],EAX
@@ -8,5 +16,8 @@ MOV [EBP-8],EAX
 MOV EAX,[EBP-4]
 MOV EBX,[EBP-8]
 ADD EAX,EBX
-RET
+JMP .EXIT
+.EXIT:
+MOV ESP,EBP
+POP EBP
 RET

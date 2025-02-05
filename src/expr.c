@@ -210,7 +210,7 @@ void expr()
                         start=1;
                         while (tok != ';' && tok)
                                 expr();
-                        fprintf(fo,"RET\n");
+                        fprintf(fo,"JMP .EXIT\n");
                         break;
                 }
                 case TOK_IF:
@@ -323,7 +323,12 @@ void expr()
                                 {
                                         src=tmp;
                                         fprintf(fo,"%s:\n",name);
+                                        fprintf(fo,"PUSH EBP\n");
+                                        fprintf(fo,"MOV EBP,ESP\n");
                                         block();
+                                        fprintf(fo,".EXIT:\n");
+                                        fprintf(fo,"MOV ESP,EBP\n");
+                                        fprintf(fo,"POP EBP\n");
                                         fprintf(fo,"RET\n");
                                         return;
                                 }

@@ -53,6 +53,12 @@ int main(int argc, char ** argv)
 		return(1);
 	}
 
+        fprintf(fo,"global _start\n");
+        fprintf(fo,"_start:\n");
+        fprintf(fo,"call main\n");
+        fprintf(fo,"mov ebx,eax\n");
+        fprintf(fo,"mov eax,1\n");
+        fprintf(fo,"int 0x80\n");
 	src=Buffer;
         while (*src)
                 expr();
