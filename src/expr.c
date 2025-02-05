@@ -247,6 +247,7 @@ void expr()
                 case ')':
                 case 10:
                 break;
+                case ',':
                 case ';':
                 {
                         start = 1;
@@ -310,6 +311,25 @@ void expr()
                         int newTok=tok;
                         src=tmp;
                         tok=t;
+                        if (newTok=='(')
+                        {
+                                char name[sizeof(ident)];
+                                strcpy(name,ident);
+                                while (tok != '(') next();
+                                while (tok != ')') {expr();}
+                                if (typeofnext() == '{')
+                                {
+                                        fprintf(fo,"%s:\n",name);
+                                        block();
+                                        fprintf(fo,"RET\n");
+                                        return;
+                                }
+                                else
+                                {
+                                        fprintf(fo,"call %s\n",name);
+                                        return;
+                                }
+                        }
                         if (newTok=='=') return;
                         VAR * v = get_var(ident);
                         if (v)
