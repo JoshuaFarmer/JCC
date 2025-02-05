@@ -2,7 +2,7 @@
 
 char *src;
 
-int tok;
+int tok,prvtok;
 char ident[32];
 
 struct KEY keys[]=
@@ -82,6 +82,7 @@ void next()
                 tok = TOK_IDE;
                 return;
         }
+        prvtok = tok;
         tok = *src++;
 }
 
@@ -100,7 +101,6 @@ int get_i()
 
 int start=1;
 VAR * list = NULL;
-
 
 void cleanup()
 {
@@ -369,8 +369,28 @@ void expr()
                 case '&':
                 {
                         int op = tok;
-                        expr();
-                        fprintf(fo,"%s EAX,EBX\n",(op=='|')?"OR":"AND");
+                        if (prvtok==TOK_IDE||isdigit(prvtok))
+                        {
+                                expr();
+                                fprintf(fo,"%s EAX,EBX\n",(op=='|')?"OR":"AND");
+                        }
+                        else
+                        {
+                                char * tmp = src;
+                                int t = tok;
+                                next();
+                                int newTok=tok;
+                                src=tmp;
+                                tok=t;
+                                if (newTok=='=') return; // invalid
+                                VAR * v = get_var(ident);
+                                if (v)
+                                {
+                                        fprintf(fo,"LEA EAX,[EBP-%d]\n",v->bpoff);
+                                        start = 0;
+                                }
+                                next();
+                        }
                         break;
                 }
                 case '^':
