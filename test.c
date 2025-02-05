@@ -1,2 +1,2 @@
-int a;
-1&a;
+int addr=753664;
+*addr = 65;

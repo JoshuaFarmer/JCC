@@ -330,13 +330,9 @@ void expr()
                 } break;
                 case '(':
                 {
-                        expr();
-                        if (tok != ')')
-                                next();
-                        if (tok != ')')
+                        while (tok != ')')
                         {
-                                fprintf(fo,"Error: Expected ')'\n");
-                                exit(1);
+                                expr();
                         }
                         
                         next();
@@ -382,9 +378,9 @@ void expr()
                                         {
                                                 switch(v->size)
                                                 {
-                                                        case 4: fprintf(fo,"MOV ECX,[EBP-%d]\n",v->bpoff); break;
-                                                        case 2: fprintf(fo,"MOV CX,[EBP-%d]\n",v->bpoff); break;
-                                                        case 1: fprintf(fo,"MOV CL,[EBP-%d]\n",v->bpoff); break;
+                                                        case 4: fprintf(fo,"MOV EDI,[EBP-%d]\n",v->bpoff); break;
+                                                        case 2: fprintf(fo,"MOV DI,[EBP-%d]\n",v->bpoff); break;
+                                                        case 1: fprintf(fo,"MOV DIL,[EBP-%d]\n",v->bpoff); break;
                                                 }
                                                 start = 0;
                                         }
@@ -393,7 +389,7 @@ void expr()
                                                 printf("VARIABLE NOT FOUND: %s\n",id);
                                                 exit(1);
                                         }
-                                        fprintf(fo,"MOV [ECX],EAX\n");
+                                        fprintf(fo,"MOV [EDI],EAX\n");
                                         return;
                                 }
                                 expr();
