@@ -122,7 +122,7 @@ int bpoff=4;
 
 void create_var(int size, char * name, int is_const)
 {
-        printf("SUB ESP,%d\n",size);
+        fprintf(fo,"SUB ESP,%d\n",size);
         if (!list)
         {
                 list = malloc(sizeof(VAR));
@@ -169,7 +169,7 @@ void dumpvars()
         VAR * x = list;
         while (x != NULL)
         {
-                printf("sizeof(%s)==%d,const=%d,bpoff=%d\n",x->name,x->size,x->is_constant,x->bpoff);
+                fprintf(fo,"sizeof(%s)==%d,const=%d,bpoff=%d\n",x->name,x->size,x->is_constant,x->bpoff);
                 x=x->next;
         }
 }
@@ -194,7 +194,7 @@ void expr()
         if (isdigit(tok))
         {
                 int i = get_i();
-                (start) ? printf("MOV EAX,%d\n", i) : printf("MOV EBX,%d\n", i);
+                (start) ? fprintf(fo,"MOV EAX,%d\n", i) : fprintf(fo,"MOV EBX,%d\n", i);
                 start = 0;
                 return;
         }
@@ -210,36 +210,36 @@ void expr()
                         start=1;
                         while (tok != ';' && tok)
                                 expr();
-                        printf("RET\n");
+                        fprintf(fo,"RET\n");
                         break;
                 }
                 case TOK_IF:
                 {
                         start=1;
-                        printf("M%d:\n",label);
+                        fprintf(fo,"M%d:\n",label);
                         expr();
                         labels[lapos++]=label++;
-                        printf("CMP EAX,0\n");
-                        printf("JE M%d\n",label);
+                        fprintf(fo,"CMP EAX,0\n");
+                        fprintf(fo,"JE M%d\n",label);
                         labels[lapos++]=label++;
                         start=1;
                         block();
-                        printf("M%d:\n",labels[--lapos]);
+                        fprintf(fo,"M%d:\n",labels[--lapos]);
                 } break;
                 case TOK_WHILE:
                 {
                         start=1;
                         int org = label;
-                        printf("M%d:\n",org);
+                        fprintf(fo,"M%d:\n",org);
                         expr();
                         labels[lapos++]=label++;
-                        printf("CMP EAX,0\n");
-                        printf("JE M%d\n",label);
+                        fprintf(fo,"CMP EAX,0\n");
+                        fprintf(fo,"JE M%d\n",label);
                         labels[lapos++]=label++;
                         start=1;
                         block();
-                        printf("JMP M%d\n",org);
-                        printf("M%d:\n",labels[--lapos]);
+                        fprintf(fo,"JMP M%d\n",org);
+                        fprintf(fo,"M%d:\n",labels[--lapos]);
                 } break;
                 case 0:
                 case 13:
@@ -285,20 +285,20 @@ void expr()
                         {
                                 switch(v->size)
                                 {
-                                        case 4: printf("MOV [EBP-%d],EAX\n",v->bpoff); break;
-                                        case 2: printf("MOV [EBP-%d],AX\n",v->bpoff); break;
-                                        case 1: printf("MOV [EBP-%d],AL\n",v->bpoff); break;
+                                        case 4: fprintf(fo,"MOV [EBP-%d],EAX\n",v->bpoff); break;
+                                        case 2: fprintf(fo,"MOV [EBP-%d],AX\n",v->bpoff); break;
+                                        case 1: fprintf(fo,"MOV [EBP-%d],AL\n",v->bpoff); break;
                                 }
                                 v->assigned=1;
                         }
                         else if (v)
                         {
-                                printf("CAN'T ASSIGN TO CONSTANT: %s\n",ident);
+                                fprintf(fo,"CAN'T ASSIGN TO CONSTANT: %s\n",ident);
                                 exit(1);
                         }
                         else
                         {
-                                printf("VARIABLE NOT FOUND: %s\n",ident);
+                                fprintf(fo,"VARIABLE NOT FOUND: %s\n",ident);
                                 exit(1);
                         }
                 } break;
@@ -316,15 +316,15 @@ void expr()
                         {
                                 switch(v->size)
                                 {
-                                        case 4: printf("MOV E%cX,[EBP-%d]\n",(start)?'A':'B',v->bpoff); break;
-                                        case 2: printf("MOV %cX,[EBP-%d]\n",(start)?'A':'B',v->bpoff); break;
-                                        case 1: printf("MOV %cL,[EBP-%d]\n",(start)?'A':'B',v->bpoff); break;
+                                        case 4: fprintf(fo,"MOV E%cX,[EBP-%d]\n",(start)?'A':'B',v->bpoff); break;
+                                        case 2: fprintf(fo,"MOV %cX,[EBP-%d]\n",(start)?'A':'B',v->bpoff); break;
+                                        case 1: fprintf(fo,"MOV %cL,[EBP-%d]\n",(start)?'A':'B',v->bpoff); break;
                                 }
                                 start = 0;
                         }
                         else
                         {
-                                printf("VARIABLE NOT FOUND: %s\n",ident);
+                                fprintf(fo,"VARIABLE NOT FOUND: %s\n",ident);
                                 exit(1);
                         }
                 } break;
@@ -335,7 +335,7 @@ void expr()
                                 next();
                         if (tok != ')')
                         {
-                                printf("Error: Expected ')'\n");
+                                fprintf(fo,"Error: Expected ')'\n");
                                 exit(1);
                         }
                         
@@ -347,7 +347,7 @@ void expr()
                 {
                         int op = tok;
                         expr();
-                        printf("%s EAX,EBX\n",(op=='+')?"ADD":"SUB");
+                        fprintf(fo,"%s EAX,EBX\n",(op=='+')?"ADD":"SUB");
                         break;
                 }
                 case '*':
@@ -355,14 +355,14 @@ void expr()
                 {
                         int op = tok;
                         expr();
-                        printf("%s EAX,EBX\n",(op=='*')?"MUL":"DIV");
+                        fprintf(fo,"%s EAX,EBX\n",(op=='*')?"MUL":"DIV");
                         break;
                 }
                 case '!':
                 case '~':
                 {
                         expr();
-                        printf("NOT EAX\n");
+                        fprintf(fo,"NOT EAX\n");
                         break; 
                 }
                 case '|':
@@ -370,19 +370,19 @@ void expr()
                 {
                         int op = tok;
                         expr();
-                        printf("%s EAX,EBX\n",(op=='|')?"OR":"AND");
+                        fprintf(fo,"%s EAX,EBX\n",(op=='|')?"OR":"AND");
                         break;
                 }
                 case '^':
                 {
                         expr();
-                        printf("XOR EAX,EBX\n");
+                        fprintf(fo,"XOR EAX,EBX\n");
                         break;
                 }
 
                 default:
                 {
-                        printf("Unsupported Token: %d\n", tok);
+                        fprintf(fo,"Unsupported Token: %d\n", tok);
                 }
         }
 }

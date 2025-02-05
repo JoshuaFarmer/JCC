@@ -9,6 +9,8 @@ void aerror()
 	exit(1);
 }
 
+FILE * fo;
+
 int main(int argc, char ** argv)
 {
 	char * SourceFile = NULL;
@@ -37,14 +39,13 @@ int main(int argc, char ** argv)
 	}
 
 	FILE * sourceFp = fopen(SourceFile,"r");
-	if (sourceFp == NULL) { aerror(); }
-
-	/* get file length */
+	fo = fopen(OutputFile,"w");
+	if (!sourceFp||!fo) { aerror(); }
 	fseek(sourceFp, 0, SEEK_END);
 	int length=ftell(sourceFp);
 	fseek(sourceFp, 0, SEEK_SET);
-
 	char * Buffer = malloc(length);
+        if (!Buffer) return 1;
 	int read = fread(Buffer, 1, length, sourceFp);
 	if (read != length)
 	{

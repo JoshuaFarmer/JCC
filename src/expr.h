@@ -7,6 +7,8 @@
 #include <string.h>
 #include <ctype.h>
 
+extern FILE * fo;
+
 enum
 {
         TOK_AUTO=0x100,
