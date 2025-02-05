@@ -2,7 +2,7 @@
 
 char *src;
 
-int tok,prvtok;
+int tok,prvtok=0;
 char ident[32];
 
 struct KEY keys[]=
@@ -64,6 +64,7 @@ int typeofnext()
 
 void next()
 {
+        prvtok = tok;
         while (*src == ' ' || *src == '\t' || *src == '\n') src++;
         if (isalpha(*src))
         {
@@ -82,20 +83,19 @@ void next()
                 tok = TOK_IDE;
                 return;
         }
-        prvtok = tok;
         tok = *src++;
 }
 
 int get_i()
 {
         int i = 0;
-        while (isdigit(tok))
+        for (--src;isdigit(*(src));src++)
         {
                 i *= 10;
-                i += tok-'0';
-                tok=*src++;
+                i += (*(src))-'0';
         }
         --src;
+        next();
         return i;
 }
 
@@ -354,8 +354,53 @@ void expr()
                 case '/':
                 {
                         int op = tok;
-                        expr();
-                        fprintf(fo,"%s EAX,EBX\n",(op=='*')?"MUL":"DIV");
+                        if (prvtok==TOK_IDE||isdigit(prvtok))
+                        {
+                                expr();
+                                fprintf(fo,"%s EAX,EBX\n",(op=='*')?"MUL":"DIV");
+                        }
+                        else
+                        {
+                                char * tmp = src;
+                                int t = tok;
+                                next();
+                                char id[sizeof(ident)];
+                                strcpy(id,ident);
+                                next();
+                                int newTok=tok;
+                                src=tmp;
+                                tok=t;
+                                if (newTok=='=')
+                                {
+                                        expr();
+                                        next();
+                                        start=1;
+                                        expr();
+
+                                        VAR * v = get_var(ident);
+                                        if (v)
+                                        {
+                                                switch(v->size)
+                                                {
+                                                        case 4: fprintf(fo,"MOV ECX,[EBP-%d]\n",v->bpoff); break;
+                                                        case 2: fprintf(fo,"MOV CX,[EBP-%d]\n",v->bpoff); break;
+                                                        case 1: fprintf(fo,"MOV CL,[EBP-%d]\n",v->bpoff); break;
+                                                }
+                                                start = 0;
+                                        }
+                                        else
+                                        {
+                                                printf("VARIABLE NOT FOUND: %s\n",id);
+                                                exit(1);
+                                        }
+                                        fprintf(fo,"MOV [ECX],EAX\n");
+                                        return;
+                                }
+                                expr();
+                                fprintf(fo,"MOV EAX,[EAX]\n");
+                                start = 0;
+                                next();
+                        }
                         break;
                 }
                 case '!':
@@ -369,7 +414,7 @@ void expr()
                 case '&':
                 {
                         int op = tok;
-                        if (prvtok==TOK_IDE||isdigit(prvtok))
+                        if ((prvtok==TOK_IDE) || isdigit(prvtok))
                         {
                                 expr();
                                 fprintf(fo,"%s EAX,EBX\n",(op=='|')?"OR":"AND");
