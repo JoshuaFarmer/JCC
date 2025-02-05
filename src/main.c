@@ -1,7 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
-#include"tok.h"
 #include"expr.h"
 
 void aerror()
@@ -53,13 +52,9 @@ int main(int argc, char ** argv)
 		return(1);
 	}
 
-	printf("%s\n",Buffer);
-
-	const char *input = Buffer;
-	tokenise(input);
-	print_tokens();
-	delete_toks();
-
+	src=Buffer;
+        while (*src)
+                expr();
 	free(Buffer);
 	fclose(sourceFp);
 	return(0);
