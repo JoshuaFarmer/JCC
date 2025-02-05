@@ -368,27 +368,15 @@ void expr()
                                 tok=t;
                                 if (newTok=='=')
                                 {
+                                        tmp = src;
+                                        src = id;
+                                        expr();
+                                        src = tmp;
                                         expr();
                                         next();
                                         start=1;
+                                        fprintf(fo,"MOV EDI,EAX\n");
                                         expr();
-
-                                        VAR * v = get_var(ident);
-                                        if (v)
-                                        {
-                                                switch(v->size)
-                                                {
-                                                        case 4: fprintf(fo,"MOV EDI,[EBP-%d]\n",v->bpoff); break;
-                                                        case 2: fprintf(fo,"MOV DI,[EBP-%d]\n",v->bpoff); break;
-                                                        case 1: fprintf(fo,"MOV DIL,[EBP-%d]\n",v->bpoff); break;
-                                                }
-                                                start = 0;
-                                        }
-                                        else
-                                        {
-                                                printf("VARIABLE NOT FOUND: %s\n",id);
-                                                exit(1);
-                                        }
                                         fprintf(fo,"MOV [EDI],EAX\n");
                                         return;
                                 }
@@ -429,6 +417,11 @@ void expr()
                                 {
                                         fprintf(fo,"LEA EAX,[EBP-%d]\n",v->bpoff);
                                         start = 0;
+                                }
+                                else
+                                {
+                                        printf("VARIABLE NOT FOUND: %s\n",ident);
+                                        exit(1);
                                 }
                                 next();
                         }
