@@ -39,10 +39,34 @@ struct KEY keys[]=
         {.text="while",TOK_WHILE},
 };
 
+int typeofnext()
+{
+        char * x = src;
+        char id[sizeof(ident)];
+        while (*x == ' ' || *x == '\t' || *x == '\n') x++;
+        if (isalpha(*x))
+        {
+                int i = 0;
+                while (isalnum(*x) && i < 31) {
+                        id[i++] = *x++;
+                } id[i] = '\0';
+                for (int j = 0; j < 30; ++j)
+                {
+                        if (strcmp(keys[j].text,id)==0)
+                        {
+                                return keys[j].tok;
+                        }
+                }
+                return TOK_IDE;
+        }
+        return *x;
+}
+
 void next()
 {
         while (*src == ' ' || *src == '\t' || *src == '\n') src++;
-        if (isalpha(*src)) {
+        if (isalpha(*src))
+        {
                 int i = 0;
                 while (isalnum(*src) && i < 31) {
                         ident[i++] = *src++;
@@ -151,21 +175,64 @@ void dumpvars()
 }
 
 int is_const=0;
+int labels[1024];
+int lapos=0;
+int label=0;
+
+void block()
+{
+        while (tok != '{')
+                next();
+        while (tok != '}')
+                expr();
+        start=1;
+}
+
 void expr()
 {
         next();
         if (isdigit(tok))
         {
                 int i = get_i();
-                (start) ? printf("MOV EAX, %d\n", i) : printf("MOV EBX, %d\n", i);
+                (start) ? printf("MOV EAX,%d\n", i) : printf("MOV EBX,%d\n", i);
                 start = 0;
                 return;
         }
 
         switch (tok)
         {
+                case TOK_IF:
+                {
+                        start=1;
+                        printf("M%d:\n",label);
+                        expr();
+                        labels[lapos++]=label++;
+                        printf("CMP EAX,0\n");
+                        printf("JE M%d\n",label);
+                        labels[lapos++]=label++;
+                        start=1;
+                        block();
+                        printf("M%d:\n",labels[--lapos]);
+                } break;
+                case TOK_WHILE:
+                {
+                        start=1;
+                        int org = label;
+                        printf("M%d:\n",org);
+                        expr();
+                        labels[lapos++]=label++;
+                        printf("CMP EAX,0\n");
+                        printf("JE M%d\n",label);
+                        labels[lapos++]=label++;
+                        start=1;
+                        block();
+                        printf("JMP M%d\n",org);
+                        printf("M%d:\n",labels[--lapos]);
+                } break;
                 case 0:
                 case 13:
+                case '}':
+                case ')':
                 case 10:
                 break;
                 case ';':
@@ -251,10 +318,11 @@ void expr()
                 } break;
                 case '(':
                 {
-                        next();
                         expr();
-                        
-                        if (tok != ')') {
+                        if (tok != ')')
+                                next();
+                        if (tok != ')')
+                        {
                                 printf("Error: Expected ')'\n");
                                 exit(1);
                         }

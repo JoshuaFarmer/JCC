@@ -1,4 +1,5 @@
-int x = 1;
-int y = 1;
-int z = x+y;
-z=y*x;
+int z = 1;
+while (z)
+{
+        z = 0;
+}
