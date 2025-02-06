@@ -4,6 +4,11 @@ extern printf();
 extern putchar();
 extern exit();
 
+/*
+   Statements don't need to be in functions,
+   you just need to remember to exit from them
+   lmao
+*/
 error:
         putchar(69);
         exit(1);
