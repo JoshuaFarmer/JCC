@@ -322,6 +322,7 @@ void expr()
                                 if (typeofnext() == '{')
                                 {
                                         src=tmp;
+                                        cleanup();
                                         fprintf(fo,"%s:\n",name);
                                         fprintf(fo,"PUSH EBP\n");
                                         fprintf(fo,"MOV EBP,ESP\n");
@@ -330,6 +331,7 @@ void expr()
                                         fprintf(fo,"MOV ESP,EBP\n");
                                         fprintf(fo,"POP EBP\n");
                                         fprintf(fo,"RET\n");
+                                        cleanup();
                                         return;
                                 }
                                 else
