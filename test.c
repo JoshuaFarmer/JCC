@@ -13,7 +13,7 @@ error:
         putchar(69);
         exit(1);
 
-main()
+main(c,v)
 {
         /* test */
         char * s = malloc(13);
@@ -26,5 +26,5 @@ main()
         *(s+1) = 0;
         printf(s);
         free(s);
-        return 0;
+        return c;
 }

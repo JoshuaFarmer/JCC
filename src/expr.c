@@ -146,7 +146,7 @@ void cleanup()
 
 int bpoff=4;
 
-void create_var(int size, char * name, int is_const)
+VAR * create_var(int size, char * name, int is_const)
 {
         fprintf(fo,"SUB ESP,%d\n",size);
         if (!list)
@@ -159,20 +159,20 @@ void create_var(int size, char * name, int is_const)
                 list->next=NULL;
                 list->assigned=0;
                 list->bpoff=bpoff;
+                return list;
         }
-        else
-        {
-                VAR * new = malloc(sizeof(VAR));
-                if (!new) exit(2);
-                new->is_constant=is_const;
-                new->name=strdup(name);
-                new->next=list->next;
-                new->bpoff=bpoff;
-                new->size=size;
-                new->assigned=0;
-                list->next=new;
-        }
+
+        VAR * new = malloc(sizeof(VAR));
+        if (!new) exit(2);
+        new->is_constant=is_const;
+        new->name=strdup(name);
+        new->next=list->next;
+        new->bpoff=bpoff;
+        new->size=size;
+        new->assigned=0;
+        list->next=new;
         bpoff += size;
+        return new;
 }
 
 VAR * get_var(const char * name)
@@ -379,6 +379,24 @@ void expr()
                                         fprintf(fo,"%s:\n",name);
                                         fprintf(fo,"PUSH EBP\n");
                                         fprintf(fo,"MOV EBP,ESP\n");
+                                        while (tok != '(' && tok) next();
+                                        int off = 4;
+                                        while (tok != ')' && tok)
+                                        {
+                                                next();
+                                                if (tok == TOK_IDE)
+                                                {
+                                                        VAR * x = create_var(4,ident,0);
+                                                        fprintf(fo,"MOV EAX,DWORD[EBP+%d]\n",off);
+                                                        fprintf(fo,"MOV DWORD[EBP-%d],EAX\n",x->bpoff);
+                                                        off+=4;
+                                                        is_const = 0;
+                                                }
+                                                else if (tok == TOK_CONST)
+                                                {
+                                                        is_const = 1;
+                                                }
+                                        }
                                         block();
                                         fprintf(fo,".EXIT:\n");
                                         fprintf(fo,"MOV ESP,EBP\n");
