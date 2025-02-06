@@ -1,8 +1,13 @@
-extern putchar();
-extern getchar();
+extern malloc();
+extern free();
+extern printf();
+
 main()
 {
-        int a = getchar();
-        putchar(a);
-        return a;
+        char * s = malloc(13);
+        *s = 65;
+        *(s+1) = 0;
+        printf(s);
+        free(s);
+        return 0;
 }

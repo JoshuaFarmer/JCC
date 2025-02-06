@@ -10,6 +10,7 @@ struct KEY keys[]=
         {.text="auto",TOK_AUTO},
         {.text="break",TOK_BREAK},
         {.text="case",TOK_CASE},
+        {.text="char",TOK_CHAR},
         {.text="const",TOK_CONST},
         {.text="continue",TOK_CONTINUE},
         {.text="default",TOK_DEFAULT},
@@ -50,7 +51,7 @@ int typeofnext()
                 while (isalnum(*x) && i < 31) {
                         id[i++] = *x++;
                 } id[i] = '\0';
-                for (int j = 0; j < 30; ++j)
+                for (int j = 0; j < 31; ++j)
                 {
                         if (strcmp(keys[j].text,id)==0)
                         {
@@ -72,7 +73,7 @@ void next()
                 while (isalnum(*src) && i < 31) {
                         ident[i++] = *src++;
                 } ident[i] = '\0';
-                for (int j = 0; j < 30; ++j)
+                for (int j = 0; j < 31; ++j)
                 {
                         if (strcmp(keys[j].text,ident)==0)
                         {
@@ -269,22 +270,25 @@ void expr()
                 {
                         is_const=1;
                 } break;
+                case TOK_CHAR:
+                {
+                        next();
+                        if (tok == '*') {next(); create_var(4,ident,is_const);}
+                        else create_var(1,ident,is_const);
+                        is_const=0;
+                } break;
                 case TOK_INT:
                 {
                         next();
-                        create_var(4,ident,is_const);
+                        if (tok == '*') {next(); create_var(4,ident,is_const);}
+                        else create_var(4,ident,is_const);
                         is_const=0;
                 } break;
                 case TOK_SHORT:
                 {
                         next();
-                        create_var(2,ident,is_const);
-                        is_const=0;
-                } break;
-                case TOK_CHAR:
-                {
-                        next();
-                        create_var(1,ident,is_const);
+                        if (tok == '*') {next(); create_var(4,ident,is_const);}
+                        else create_var(2,ident,is_const);
                         is_const=0;
                 } break;
                 case '=':
