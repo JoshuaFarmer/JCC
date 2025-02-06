@@ -3,6 +3,17 @@ global main
 extern malloc
 extern free
 extern printf
+extern putchar
+extern exit
+error:
+MOV EAX,69
+PUSH EAX
+CALL putchar
+ADD ESP,4*1
+MOV EAX,1
+PUSH EAX
+CALL exit
+ADD ESP,4*1
 main:
 PUSH EBP
 MOV EBP,ESP
@@ -12,6 +23,16 @@ PUSH EAX
 CALL malloc
 ADD ESP,4*1
 MOV [EBP-4],EAX
+M0:
+MOV EAX,[EBP-4]
+TEST EAX,EAX
+SETZ AL
+MOVZX EAX,AL
+CMP EAX,0
+JE M1
+JMP error
+SUB ESP,1
+M1:
 MOV EAX,[EBP-4]
 MOV EDI,EAX
 MOV EAX,65

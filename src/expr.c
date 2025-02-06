@@ -271,6 +271,10 @@ void expr()
                         fprintf(fo,"M%d:\n",labels[--lapos]);
                 } break;
                 case 0:
+                case TOK_SIGNED:
+                case TOK_UNSIGNED:
+                case TOK_STATIC:
+                case TOK_REGISTER:
                 case 13:
                 case '}':
                 case ')':
@@ -295,6 +299,12 @@ void expr()
                 {
                         is_const=1;
                 } break;
+                case TOK_GOTO:
+                {
+                        next();
+                        fprintf(fo,"JMP %s\n",ident);
+                }
+                case TOK_VOID:
                 case TOK_CHAR:
                 {
                         next();
@@ -393,6 +403,12 @@ void expr()
                                 fprintf(fo,"ADD ESP,4*%d\n",x);
                                 return;
                         }
+                        else if (newTok == ':')
+                        {
+                                next();
+                                fprintf(fo,"%s:\n",ident);
+                                return;
+                        }
                         if (newTok=='=') return;
                         VAR * v = get_var(ident);
                         if (v)
@@ -471,6 +487,12 @@ void expr()
                         break;
                 }
                 case '!':
+                {
+                        expr();
+                        fprintf(fo,"TEST EAX,EAX\n");
+                        fprintf(fo,"SETZ AL\n");
+                        fprintf(fo,"MOVZX EAX,AL\n");
+                } break;
                 case '~':
                 {
                         expr();
