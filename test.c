@@ -1,6 +1,11 @@
 main()
 {
-        int a = 1;
-        int b = 1;
-        return a+b;
+        int a = 0;
+        int n = 10;
+        while (n)
+        {
+                a = a + 1;
+                n = n - 1;
+        }
+        return a;
 }

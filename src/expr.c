@@ -185,6 +185,7 @@ void block()
                 next();
         while (tok != '}')
                 expr();
+        next();
         start=1;
 }
 
@@ -331,7 +332,6 @@ void expr()
                                         fprintf(fo,"MOV ESP,EBP\n");
                                         fprintf(fo,"POP EBP\n");
                                         fprintf(fo,"RET\n");
-                                        cleanup();
                                         return;
                                 }
                                 else
