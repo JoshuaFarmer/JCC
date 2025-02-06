@@ -44,8 +44,9 @@ int main(int argc, char ** argv)
 	fseek(sourceFp, 0, SEEK_END);
 	int length=ftell(sourceFp);
 	fseek(sourceFp, 0, SEEK_SET);
-	char * Buffer = malloc(length);
+	char * Buffer = malloc(length+12);
         if (!Buffer) return 1;
+        memset(Buffer,0,length+12);
 	int read = fread(Buffer, 1, length, sourceFp);
 	if (read != length)
 	{
@@ -53,12 +54,8 @@ int main(int argc, char ** argv)
 		return(1);
 	}
 
-        fprintf(fo,"global _start\n");
-        fprintf(fo,"_start:\n");
-        fprintf(fo,"call main\n");
-        fprintf(fo,"mov ebx,eax\n");
-        fprintf(fo,"mov eax,1\n");
-        fprintf(fo,"int 0x80\n");
+        fprintf(fo,"section .text\n");
+        fprintf(fo,"global main\n");
 	src=Buffer;
         while (*src)
                 expr();

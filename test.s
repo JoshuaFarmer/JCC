@@ -1,33 +1,21 @@
-global _start
-_start:
-call main
-mov ebx,eax
-mov eax,1
-int 0x80
+section .text
+global main
+extern putchar
+extern getchar
 main:
 PUSH EBP
 MOV EBP,ESP
 SUB ESP,4
-MOV EAX,0
+PUSH EAX
+CALL getchar
+ADD ESP,4*1
 MOV [EBP-4],EAX
-SUB ESP,4
-MOV EAX,10
-MOV [EBP-8],EAX
-M0:
-MOV EAX,[EBP-8]
-CMP EAX,0
-JE M1
 MOV EAX,[EBP-4]
-MOV EBX,1
-ADD EAX,EBX
-MOV [EBP-4],EAX
-MOV EAX,[EBP-8]
-MOV EBX,1
-SUB EAX,EBX
-MOV [EBP-8],EAX
-JMP M0
-M1:
+PUSH EAX
+CALL putchar
+ADD ESP,4*1
 MOV EAX,[EBP-4]
+JMP .EXIT
 .EXIT:
 MOV ESP,EBP
 POP EBP

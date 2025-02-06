@@ -181,13 +181,15 @@ int label=0;
 
 void block()
 {
-        while (tok != '{')
+        while (tok != '{' && tok)
                 next();
-        while (tok != '}')
+        while (tok != '}' && tok)
                 expr();
         next();
         start=1;
 }
+
+int calling = 0;
 
 void expr()
 {
@@ -252,6 +254,16 @@ void expr()
                 case ';':
                 {
                         start = 1;
+                } break;
+                case TOK_EXTERN:
+                {
+                        next();
+                        fprintf(fo,"extern %s\n",ident);
+                        while (tok != '(' && tok)
+                                next();
+                        while (tok != ')' && tok)
+                                next();
+                        next();
                 } break;
                 case TOK_CONST:
                 {
@@ -318,8 +330,8 @@ void expr()
                                 strcpy(name,ident);
 
                                 tmp = src;
-                                while (tok != '(') next();
-                                while (tok != ')') next();
+                                while (tok != '(' && tok) next();
+                                while (tok != ')' && tok) next();
                                 if (typeofnext() == '{')
                                 {
                                         src=tmp;
@@ -334,12 +346,22 @@ void expr()
                                         fprintf(fo,"RET\n");
                                         return;
                                 }
-                                else
-                                {
-                                        src=tmp;
-                                        fprintf(fo,"call %s\n",name);
-                                        return;
+
+                                src=tmp;
+                                calling=1;
+                                while (tok != '(' && tok) next();
+                                int x = 0;
+                                while (tok != ')' && tok) {
+                                        while (tok != ';' && tok && tok != ')' && tok != ',')
+                                        {
+                                                expr();
+                                        }
+                                        fprintf(fo,"PUSH EAX\n");
+                                        ++x;
                                 }
+                                fprintf(fo,"CALL %s\n",name);
+                                fprintf(fo,"ADD ESP,4*%d\n",x);
+                                return;
                         }
                         if (newTok=='=') return;
                         VAR * v = get_var(ident);
@@ -361,7 +383,7 @@ void expr()
                 } break;
                 case '(':
                 {
-                        while (tok != ')')
+                        while (tok != ')' && tok)
                         {
                                 expr();
                         }
