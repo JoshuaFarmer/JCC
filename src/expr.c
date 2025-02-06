@@ -361,6 +361,7 @@ void expr()
                                 tmp = src;
                                 while (tok != '(' && tok) next();
                                 while (tok != ')' && tok) next();
+                                next();
                                 if (typeofnext() == '{')
                                 {
                                         src=tmp;
