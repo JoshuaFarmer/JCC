@@ -4,6 +4,7 @@ extern printf();
 
 main()
 {
+        /* test */
         char * s = malloc(13);
         *s = 65;
         *(s+1) = 0;

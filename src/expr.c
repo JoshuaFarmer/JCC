@@ -45,6 +45,19 @@ int typeofnext()
         char * x = src;
         char id[sizeof(ident)];
         while (*x == ' ' || *x == '\t' || *x == '\n') x++;
+        if (*x == '/' && *(x + 1) == '*')
+        {
+                x += 2;
+                while (*x && !(*x == '*' && *(x + 1) == '/'))
+                {
+                        x++;
+                }
+                if (*x)
+                {
+                        x += 2;
+                }
+        }
+
         if (isalpha(*x))
         {
                 int i = 0;
@@ -67,6 +80,18 @@ void next()
 {
         prvtok = tok;
         while (*src == ' ' || *src == '\t' || *src == '\n') src++;
+        if (*src == '/' && *(src + 1) == '*')
+        {
+                src += 2;
+                while (*src && !(*src == '*' && *(src + 1) == '/'))
+                {
+                        src++;
+                }
+                if (*src)
+                {
+                        src += 2;
+                }
+        }
         if (isalpha(*src))
         {
                 int i = 0;
@@ -410,7 +435,7 @@ void expr()
                         if (prvtok==TOK_IDE||isdigit(prvtok))
                         {
                                 expr();
-                                fprintf(fo,"%s EAX,EBX\n",(op=='*')?"MUL":"DIV");
+                                fprintf(fo,"%s EAX,EBX\n",(op=='*')?"IMUL":"IDIV");
                         }
                         else
                         {
