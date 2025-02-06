@@ -20,6 +20,7 @@ main()
         if (!s)
         {
                 goto error;
+                /* you could also call it with `error();` */
         }
         *s = 65;
         *(s+1) = 0;
