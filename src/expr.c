@@ -1,85 +1,36 @@
+#define _expr_
 #include "expr.h"
+#include <stdarg.h>
+void expr();
 
+Variable list;
 char *src;
+char id[64];
+int  tok,num;
+int  bpoff=4;
+int  use_eax=1;
+int  m = 0;
 
-int tok,prvtok=0;
-char ident[32];
+char    id_stack[256][64];
+uint8_t id_stack_ptr = 0;
 
-struct KEY keys[]=
+void PushID()
 {
-        {.text="auto",TOK_AUTO},
-        {.text="break",TOK_BREAK},
-        {.text="case",TOK_CASE},
-        {.text="char",TOK_CHAR},
-        {.text="const",TOK_CONST},
-        {.text="continue",TOK_CONTINUE},
-        {.text="default",TOK_DEFAULT},
-        {.text="do",TOK_DO},
-        {.text="double",TOK_DOUBLE},
-        {.text="else",TOK_ELSE},
-        {.text="enum",TOK_ENUM},
-        {.text="extern",TOK_EXTERN},
-        {.text="float",TOK_FLOAT},
-        {.text="for",TOK_FOR},
-        {.text="goto",TOK_GOTO},
-        {.text="if",TOK_IF},
-        {.text="int",TOK_INT},
-        {.text="long",TOK_LONG},
-        {.text="register",TOK_REGISTER},
-        {.text="return",TOK_RETURN},
-        {.text="short",TOK_SHORT},
-        {.text="signed",TOK_SIGNED},
-        {.text="sizeof",TOK_SIZEOF},
-        {.text="static",TOK_STATIC},
-        {.text="struct",TOK_STRUCT},
-        {.text="switch",TOK_SWITCH},
-        {.text="typedef",TOK_TYPEDEF},
-        {.text="union",TOK_UNION},
-        {.text="unsigned",TOK_UNSIGNED},
-        {.text="void",TOK_VOID},
-        {.text="while",TOK_WHILE},
-};
-
-int typeofnext()
-{
-        char * x = src;
-        char id[sizeof(ident)];
-        while (*x == ' ' || *x == '\t' || *x == '\n') x++;
-        if (*x == '/' && *(x + 1) == '*')
-        {
-                x += 2;
-                while (*x && !(*x == '*' && *(x + 1) == '/'))
-                {
-                        x++;
-                }
-                if (*x)
-                {
-                        x += 2;
-                }
-        }
-
-        if (isalpha(*x))
-        {
-                int i = 0;
-                while (isalnum(*x) && i < 31) {
-                        id[i++] = *x++;
-                } id[i] = '\0';
-                for (int j = 0; j < 31; ++j)
-                {
-                        if (strcmp(keys[j].text,id)==0)
-                        {
-                                return keys[j].tok;
-                        }
-                }
-                return TOK_IDE;
-        }
-        return *x;
+        strcpy(id_stack[id_stack_ptr++],id);
 }
 
-void next()
+void PopID()
 {
-        prvtok = tok;
-        while (*src == ' ' || *src == '\t' || *src == '\n') src++;
+        strcpy(id,id_stack[--id_stack_ptr]);
+}
+
+void ClearID()
+{
+        memset(id_stack,0,sizeof(id_stack));
+}
+
+void skip_comment()
+{
         if (*src == '/' && *(src + 1) == '*')
         {
                 src += 2;
@@ -92,15 +43,28 @@ void next()
                         src += 2;
                 }
         }
+}
+
+void skip_whitespace()
+{
+        while (*src == ' ' || *src == '\t' || *src == '\n') src++;
+}
+
+void next()
+{
+        num=0;
+        skip_whitespace();
+        skip_comment();
+        memset(id,0,sizeof(id));
         if (isalpha(*src))
         {
                 int i = 0;
                 while (isalnum(*src) && i < 31) {
-                        ident[i++] = *src++;
-                } ident[i] = '\0';
+                        id[i++] = *src++;
+                } id[i] = '\0';
                 for (int j = 0; j < 31; ++j)
                 {
-                        if (strcmp(keys[j].text,ident)==0)
+                        if (strcmp(keys[j].text,id)==0)
                         {
                                 tok=keys[j].tok;
                                 return;
@@ -109,29 +73,44 @@ void next()
                 tok = TOK_IDE;
                 return;
         }
+        else if (*src >= '0' && *src <= '9')
+        {
+                while (*src >= '0' && *src <= '9')
+                {
+                        num = num * 10 + (*src-'0');
+                        ++src;
+                }
+                tok=TOK_NUM;
+                return;
+        }
+        else if (*src == '!' && *(src+1) == '=')
+        {
+                src += 2;
+                tok = TOK_NEQ;
+                return;
+        }
+        else if (*src == '=' && *(src+1) == '=')
+        {
+                src += 2;
+                tok = TOK_EQ;
+                return;
+        }
+
         tok = *src++;
 }
 
-int get_i()
+void emit(const char *format, ...)
 {
-        int i = 0;
-        for (--src;isdigit(*(src));src++)
-        {
-                i *= 10;
-                i += (*(src))-'0';
-        }
-        --src;
-        next();
-        return i;
+        va_list args;
+        va_start(args, format);
+        vfprintf(fo, format, args);
+        va_end(args);
 }
 
-int start=1;
-VAR * list = NULL;
-
-void cleanup()
+void clean()
 {
-        VAR * x = list;
-        VAR * prev = NULL;
+        Variable * x = list.next;
+        Variable * prev = NULL;
         while (x != NULL)
         {
                 if (prev)
@@ -142,42 +121,28 @@ void cleanup()
                 prev=x;
                 x=x->next;
         }
+        bpoff=4;
 }
 
-int bpoff=4;
-
-VAR * create_var(int size, char * name, int is_const)
+Variable * cvar(int size, char * name, int is_const)
 {
-        fprintf(fo,"SUB ESP,%d\n",size);
-        if (!list)
-        {
-                list = malloc(sizeof(VAR));
-                if (!list) exit(2);
-                list->is_constant=is_const;
-                list->name=strdup(name);
-                list->size=size;
-                list->next=NULL;
-                list->assigned=0;
-                list->bpoff=bpoff;
-                return list;
-        }
-
-        VAR * new = malloc(sizeof(VAR));
+        fprintf(fo,"\tsub esp,%d\n",size);
+        Variable * new = malloc(sizeof(Variable));
         if (!new) exit(2);
-        new->is_constant=is_const;
+        new->con=is_const;
         new->name=strdup(name);
-        new->next=list->next;
+        new->next=list.next;
         new->bpoff=bpoff;
         new->size=size;
         new->assigned=0;
-        list->next=new;
+        list.next=new;
         bpoff += size;
         return new;
 }
 
-VAR * get_var(const char * name)
+Variable * gvar(const char * name)
 {
-        VAR * x = list;
+        Variable * x = list.next;
         while (x != NULL)
         {
                 if (strncmp(name,x->name,32)==0)
@@ -190,376 +155,429 @@ VAR * get_var(const char * name)
         return NULL;
 }
 
-void dumpvars()
+void vars()
 {
-        VAR * x = list;
+        Variable * x = list.next;
         while (x != NULL)
         {
-                printf("sizeof(%s)==%d,const=%d,bpoff=%d\n",x->name,x->size,x->is_constant,x->bpoff);
+                printf("sizeof(%s)==%d,const=%d,bpoff=%d\n",x->name,x->size,x->con,x->bpoff);
                 x=x->next;
         }
 }
 
-int is_const=0;
-int labels[1024];
-int lapos=0;
-int label=0;
-
-void block()
+bool get_var_name()
 {
-        while (tok != '{' && tok)
-                next();
-        while (tok != '}' && tok)
-                expr();
+        bool is_ptr = false;
         next();
-        start=1;
+        if (tok == '*')
+        {
+                next();
+                is_ptr = true;
+        }
+
+        PushID();
+        return is_ptr;
 }
 
-int calling = 0;
+bool is_assignment()
+{
+        char * tmp = src;
+        next();
+        src = tmp;
+        if (tok == '=')
+        {
+                return true;
+        }
+        return false;
+}
+
+void skip_til(char x)
+{
+        while (tok != x && *src && tok) next();
+}
+
+bool is_function()
+{
+        char * tmp = src;
+        next();
+        src=tmp;
+        if (tok == '(')
+        {
+                return true;
+        }
+        return false;
+}
+
+bool is_function_declaration()
+{
+        if (!is_function())
+        {
+                return false;
+        }
+
+        char * tmp = src;
+        next();
+        while (tok != ')')
+        {
+                next();
+        }
+        next();
+        src = tmp;
+        return (tok == '{');
+}
+
+void create_arguments()
+{
+        int c=0;
+        int start = 4;
+        while (*src && tok && tok != ')')
+        {
+                if (tok == TOK_IDE)
+                {
+                        Variable * x = cvar(4, id, c);
+                        emit("\tmov eax,[ebp+%d]\n",bpoff);
+                        emit("\tmov [ebp-%d],eax\n",x->bpoff);
+                        start+=4;
+                        c = 0;
+                }
+                else if (tok == TOK_CONST)
+                {
+                        c = 1;
+                }
+                next();
+        }
+}
+
+int collect_arguments()
+{
+        int c=0;
+        while (*src && tok && tok != ')')
+        {
+                expr();
+                emit("\tpush eax\n");
+                use_eax=1;
+                ++c;
+        }
+        return c;
+}
+
+#define is_start() (use_eax)
+
+void body()
+{
+        use_eax = 1;
+        while (tok != '{') next();
+        while (tok != '}') expr();
+        next();
+        use_eax = 1;
+}
 
 void expr()
 {
+        static int con=0;
         next();
-        if (isdigit(tok))
+        switch(tok)
         {
-                int i = get_i();
-                (start) ? fprintf(fo,"MOV EAX,%d\n", i) : fprintf(fo,"MOV EBX,%d\n", i);
-                start = 0;
-                return;
-        }
+                case TOK_NUM:
+                {
+                        emit("\tmov e%cx,%d\n",(use_eax)?'a':'b',num);
+                        use_eax=0;
+                } break;
 
-        switch (tok)
-        {
-                case '{':
+                case TOK_CONST:
                 {
-                        block();
+                        con=1;
                 } break;
-                case TOK_RETURN:
+
+                case TOK_INT:
+                case TOK_SHORT:
+                case TOK_CHAR:
                 {
-                        start=1;
-                        while (tok != ';' && tok)
-                                expr();
-                        fprintf(fo,"JMP .EXIT\n");
-                        break;
-                }
-                case TOK_IF:
-                {
-                        start=1;
-                        fprintf(fo,"M%d:\n",label);
-                        expr();
-                        labels[lapos++]=label++;
-                        fprintf(fo,"CMP EAX,0\n");
-                        fprintf(fo,"JE M%d\n",label);
-                        labels[lapos++]=label++;
-                        start=1;
-                        block();
-                        fprintf(fo,"M%d:\n",labels[--lapos]);
+                        int type = tok;
+                        bool is_ptr = get_var_name();
+                        PopID();
+                        if (is_ptr) { cvar(4, id, con); }
+                        else
+                        {
+                                switch (type)
+                                {
+                                        case TOK_INT:   cvar(4, id, con); break;
+                                        case TOK_SHORT: cvar(2, id, con); break;
+                                        case TOK_CHAR:  cvar(1, id, con); break;
+                                }
+                        }
                 } break;
-                case TOK_WHILE:
-                {
-                        start=1;
-                        int org = label;
-                        fprintf(fo,"M%d:\n",org);
-                        expr();
-                        labels[lapos++]=label++;
-                        fprintf(fo,"CMP EAX,0\n");
-                        fprintf(fo,"JE M%d\n",label);
-                        labels[lapos++]=label++;
-                        start=1;
-                        block();
-                        fprintf(fo,"JMP M%d\n",org);
-                        fprintf(fo,"M%d:\n",labels[--lapos]);
-                } break;
-                case 0:
-                case TOK_SIGNED:
-                case TOK_UNSIGNED:
-                case TOK_STATIC:
-                case TOK_REGISTER:
-                case 13:
-                case '}':
-                case ')':
-                case 10:
-                break;
-                case ',':
-                case ';':
-                {
-                        start = 1;
-                } break;
+
                 case TOK_EXTERN:
                 {
                         next();
-                        fprintf(fo,"extern %s\n",ident);
-                        while (tok != '(' && tok)
-                                next();
-                        while (tok != ')' && tok)
-                                next();
-                        next();
+                        emit("\textern %s\n",id);
+                        skip_til(')');
                 } break;
-                case TOK_CONST:
+
+                case '<':
                 {
-                        is_const=1;
+                        expr();
+                        emit("\tsub eax,ebx\n");
+                        emit("\tcmp eax,0\n");
+                        emit("\tsetl al\n");
+                        emit("\tmovzx eax,al\n");
                 } break;
-                case TOK_GOTO:
+
+                case '>':
                 {
-                        next();
-                        fprintf(fo,"JMP %s\n",ident);
-                }
-                case TOK_VOID:
-                case TOK_CHAR:
-                {
-                        next();
-                        if (tok == '*') {next(); create_var(4,ident,is_const);}
-                        else create_var(1,ident,is_const);
-                        is_const=0;
+                        expr();
+                        emit("\tsub eax,ebx\n");
+                        emit("\tcmp eax,0\n");
+                        emit("\tsetg al\n");
+                        emit("\tmovzx eax,al\n");
                 } break;
-                case TOK_INT:
+
+                case TOK_EQ:
                 {
-                        next();
-                        if (tok == '*') {next(); create_var(4,ident,is_const);}
-                        else create_var(4,ident,is_const);
-                        is_const=0;
+                        expr();
+                        emit("\tsub eax,ebx\n");
+                        emit("\tcmp eax,0\n");
+                        emit("\tsete al\n");
+                        emit("\tmovzx eax,al\n");
                 } break;
-                case TOK_SHORT:
+
+                case TOK_NEQ:
                 {
-                        next();
-                        if (tok == '*') {next(); create_var(4,ident,is_const);}
-                        else create_var(2,ident,is_const);
-                        is_const=0;
+                        expr();
+                        emit("\tsub eax,ebx\n");
+                        emit("\tcmp eax,0\n");
+                        emit("\tsetne al\n");
+                        emit("\tmovzx eax,al\n");
                 } break;
-                case '=':
+
+                case TOK_WHILE:
                 {
-                        start=1;
-                        char x[sizeof(ident)];
-                        strcpy(x,ident);
-                        while (tok != ';' && tok)
-                                expr();
-                        VAR * v = get_var(x);
-                        if (v&&!(v->is_constant && v->assigned))
-                        {
-                                switch(v->size)
-                                {
-                                        case 4: fprintf(fo,"MOV [EBP-%d],EAX\n",v->bpoff); break;
-                                        case 2: fprintf(fo,"MOV [EBP-%d],AX\n",v->bpoff); break;
-                                        case 1: fprintf(fo,"MOV [EBP-%d],AL\n",v->bpoff); break;
-                                }
-                                v->assigned=1;
-                        }
-                        else if (v)
-                        {
-                                printf("CAN'T ASSIGN TO CONSTANT: %s\n",ident);
-                                exit(1);
-                        }
-                        else
-                        {
-                                printf("VARIABLE NOT FOUND: %s\n",ident);
-                                exit(1);
-                        }
+                        int label = m++;
+                        int end = m++;
+                        emit(".M%d:\n",label);
+                        expr();
+                        emit("\ttest eax,eax\n");
+                        emit("\tjz .M%d\n",end);
+                        body();
+                        emit("\tjmp .M%d\n",label);
+                        emit(".M%d:\n",end);
                 } break;
+
+                case TOK_BREAK:
+                {
+                        emit("\tjmp .M%d\n",m-2);
+                } break;
+
+                case TOK_IF:
+                {
+                        int label = m++;
+                        int end = m++;
+                        emit(".M%d:\n",label);
+                        expr();
+                        emit("\ttest eax,eax\n");
+                        emit("\tjz .M%d\n",end);
+                        body();
+                        emit(".M%d:\n",end);
+                } break;
+
                 case TOK_IDE:
                 {
-                        char * tmp = src;
-                        int t = tok;
-                        next();
-                        int newTok=tok;
-                        src=tmp;
-                        tok=t;
-                        if (newTok=='(')
+                        PushID();
+                        if (is_function_declaration())
                         {
-                                char name[sizeof(ident)];
-                                strcpy(name,ident);
-
-                                tmp = src;
-                                while (tok != '(' && tok) next();
-                                while (tok != ')' && tok) next();
+                                clean();
+                                PopID();
+                                char nam[64];
+                                strcpy(nam,id);
+                                emit("%s:\n",nam);
+                                emit("\tpush ebp\n",nam);
+                                emit("\tmov ebp,esp\n",nam);
                                 next();
-                                if (typeofnext() == '{')
+                                next();
+                                create_arguments();
+                                body();
+                                emit("%s.exit:\n",nam);
+                                emit("\tmov esp,ebp\n");
+                                emit("\tpop ebp\n");
+                                emit("\tret\n");
+                        }
+                        else if (is_function())
+                        {
+                                PopID();
+                                char nam[64];
+                                strcpy(nam,id);
+                                int argc = collect_arguments();
+                                emit("\tcall %s\n",nam);
+                                emit("\tadd esp,%d\n",4*argc);
+                        }
+                        else if (!is_assignment())
+                        {
+                                PopID();
+                                Variable * var = gvar(id);
+                                if (!var)
                                 {
-                                        src=tmp;
-                                        cleanup();
-                                        fprintf(fo,"%s:\n",name);
-                                        fprintf(fo,"PUSH EBP\n");
-                                        fprintf(fo,"MOV EBP,ESP\n");
-                                        while (tok != '(' && tok) next();
-                                        int off = 4;
-                                        while (tok != ')' && tok)
-                                        {
-                                                next();
-                                                if (tok == TOK_IDE)
-                                                {
-                                                        VAR * x = create_var(4,ident,0);
-                                                        fprintf(fo,"MOV EAX,DWORD[EBP+%d]\n",off);
-                                                        fprintf(fo,"MOV DWORD[EBP-%d],EAX\n",x->bpoff);
-                                                        off+=4;
-                                                        is_const = 0;
-                                                }
-                                                else if (tok == TOK_CONST)
-                                                {
-                                                        is_const = 1;
-                                                }
-                                        }
-                                        block();
-                                        fprintf(fo,".EXIT:\n");
-                                        fprintf(fo,"MOV ESP,EBP\n");
-                                        fprintf(fo,"POP EBP\n");
-                                        fprintf(fo,"RET\n");
+                                        /* TODO - PANIC */
+                                        vars();
+                                        printf("`%s` not found\n",id);
                                         return;
                                 }
+                                switch (var->size)
+                                {
+                                        case 4:emit("\tmov e%cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
+                                        case 2:emit("\tmov %cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
+                                        case 1:emit("\tmov %cl,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
+                                }
+                                use_eax=0;
+                                expr();
+                        }
+                } break;
 
-                                src=tmp;
-                                calling=1;
-                                while (tok != '(' && tok) next();
-                                int x = 0;
-                                while (tok != ')' && tok) {
-                                        while (tok != ';' && tok && tok != ')' && tok != ',')
-                                        {
-                                                expr();
-                                        }
-                                        fprintf(fo,"PUSH EAX\n");
-                                        ++x;
-                                }
-                                fprintf(fo,"CALL %s\n",name);
-                                fprintf(fo,"ADD ESP,4*%d\n",x);
-                                return;
-                        }
-                        else if (newTok == ':')
-                        {
-                                next();
-                                fprintf(fo,"%s:\n",ident);
-                                return;
-                        }
-                        if (newTok=='=') return;
-                        VAR * v = get_var(ident);
-                        if (v)
-                        {
-                                switch(v->size)
-                                {
-                                        case 4: fprintf(fo,"MOV E%cX,[EBP-%d]\n",(start)?'A':'B',v->bpoff); break;
-                                        case 2: fprintf(fo,"MOV %cX,[EBP-%d]\n",(start)?'A':'B',v->bpoff); break;
-                                        case 1: fprintf(fo,"MOV %cL,[EBP-%d]\n",(start)?'A':'B',v->bpoff); break;
-                                }
-                                start = 0;
-                        }
-                        else
-                        {
-                                printf("VARIABLE NOT FOUND: %s\n",ident);
-                                exit(1);
-                        }
+                case ';':
+                {
+                        use_eax = 1;
+                        return;
                 } break;
-                case '(':
-                {
-                        while (tok != ')' && tok)
-                        {
-                                expr();
-                        }
-                        
-                        next();
-                        break;
-                }
-                case '+':
-                case '-':
-                {
-                        int op = tok;
-                        expr();
-                        fprintf(fo,"%s EAX,EBX\n",(op=='+')?"ADD":"SUB");
-                        break;
-                }
-                case '*':
-                case '/':
-                {
-                        int op = tok;
-                        if (prvtok==TOK_IDE||isdigit(prvtok))
-                        {
-                                expr();
-                                fprintf(fo,"%s EAX,EBX\n",(op=='*')?"IMUL":"IDIV");
-                        }
-                        else
-                        {
-                                char * tmp = src;
-                                int t = tok;
-                                next();
-                                char id[sizeof(ident)];
-                                strcpy(id,ident);
-                                next();
-                                int newTok=tok;
-                                src=tmp;
-                                tok=t;
-                                if (newTok=='=')
-                                {
-                                        tmp = src;
-                                        src = id;
-                                        expr();
-                                        src = tmp;
-                                        expr();
-                                        next();
-                                        start=1;
-                                        fprintf(fo,"MOV EDI,EAX\n");
-                                        expr();
-                                        fprintf(fo,"MOV [EDI],EAX\n");
-                                        return;
-                                }
-                                expr();
-                                fprintf(fo,"MOV EAX,[EAX]\n");
-                                start = 0;
-                                next();
-                        }
-                        break;
-                }
-                case '!':
-                {
-                        expr();
-                        fprintf(fo,"TEST EAX,EAX\n");
-                        fprintf(fo,"SETZ AL\n");
-                        fprintf(fo,"MOVZX EAX,AL\n");
-                } break;
-                case '~':
-                {
-                        expr();
-                        fprintf(fo,"NOT EAX\n");
-                        break; 
-                }
-                case '|':
+
                 case '&':
                 {
-                        int op = tok;
-                        if ((prvtok==TOK_IDE) || isdigit(prvtok))
+                        if (is_start())
                         {
-                                expr();
-                                fprintf(fo,"%s EAX,EBX\n",(op=='|')?"OR":"AND");
+                                bool is_ptr = get_var_name();
+                                if (is_ptr)
+                                {
+                                        /* TODO - PANIC */
+                                        return;
+                                }
+
+                                PopID();
+                                Variable * var = gvar(id);
+                                if (!var)
+                                {
+                                        /* TODO - PANIC */
+                                        return;
+                                }
+                                emit("\tlea eax,[ebp-%d] \n",var->bpoff);
                         }
                         else
                         {
-                                char * tmp = src;
-                                int t = tok;
-                                next();
-                                int newTok=tok;
-                                src=tmp;
-                                tok=t;
-                                if (newTok=='=') return; // invalid
-                                VAR * v = get_var(ident);
-                                if (v)
-                                {
-                                        fprintf(fo,"LEA EAX,[EBP-%d]\n",v->bpoff);
-                                        start = 0;
-                                }
-                                else
-                                {
-                                        printf("VARIABLE NOT FOUND: %s\n",ident);
-                                        exit(1);
-                                }
-                                next();
+                                expr();
+                                emit("\tand eax,ebx\n");
                         }
-                        break;
-                }
+                } break;
+
+                case '*':
+                {
+                        if (is_start())
+                        {
+                                expr();
+                                emit("\tmov eax,[eax]\n");
+                        }
+                        else
+                        {
+                                expr();
+                                emit("\timul eax,ebx\n");
+                        }
+                } break;
+
+                case '/':
+                {
+                        expr();
+                        emit("\tcdq\n");
+                        emit("\tidiv ebx\n");
+                } break;
+
+                case '%':
+                {
+                        expr();
+                        emit("\tcdq\n");
+                        emit("\tidiv ebx\n");
+                        emit("\tmov eax,edx\n");
+                } break;
+
+                case '|':
+                {
+                        expr();
+                        emit("\tor eax,ebx\n");
+                } break;
+
                 case '^':
                 {
                         expr();
-                        fprintf(fo,"XOR EAX,EBX\n");
-                        break;
-                }
+                        emit("\txor eax,ebx\n");
+                } break;
 
-                default:
+                case '~':
                 {
-                        printf("Unsupported Token: %d\n", tok);
-                }
+                        expr();
+                        emit("\tnot eax\n");
+                } break;
+
+                case '!':
+                {
+                        expr();
+                        emit("\txor eax,1\n");
+                        emit("\tand eax,1\n");
+                } break;
+
+                case TOK_RETURN:
+                {
+                        expr();
+                        emit("\tjmp .exit\n");
+                } break;
+
+                case '=':
+                {
+                        PopID();
+                        char name[64];
+                        strcpy(name,id);
+                        expr();
+
+                        Variable * var = gvar(name);
+                        if (!var || (var->con && var->assigned))
+                        {
+                                /* TODO - PANIC */
+                                return;
+                        }
+
+                        switch (var->size)
+                        {
+                                case 4:emit("\tmov [ebp-%d],eax\n",var->bpoff); break;
+                                case 2:emit("\tmov [ebp-%d],ax\n",var->bpoff); break;
+                                case 1:emit("\tmov [ebp-%d],al\n",var->bpoff); break;
+                        }
+                        var->assigned = true;
+                } break;
+
+                case '+':
+                {
+                        expr();
+                        emit("\tadd eax,ebx\n");
+                } break;
+
+                case '-':
+                {
+                        expr();
+                        emit("\tsub eax,ebx\n");
+                } break;
+
+                case ')': break;
+                case '(':
+                {
+                        while (tok != ')')
+                        {
+                                expr();
+                        }
+                } break;
         }
+}
+
+void compiler(char * buff)
+{
+        src=buff;
+        while (*src)
+        {
+                expr();
+        }
+        clean();
 }

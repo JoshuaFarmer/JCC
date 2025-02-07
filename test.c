@@ -1,30 +1,12 @@
-extern malloc();
-extern free();
-extern printf();
-extern putchar();
-extern exit();
-
-/*
-   Statements don't need to be in functions,
-   you just need to remember to exit from them
-   lmao
-*/
-error:
-        putchar(69);
-        exit(1);
+extern printf(c);
 
 main(c,v)
 {
-        /* test */
-        char * s = malloc(13);
-        if (!s)
+        int n;
+        n = 0;
+        while (n<10)
         {
-                goto error;
-                /* you could also call it with `error();` */
+                n=n+1;
         }
-        *s = 65;
-        *(s+1) = 0;
-        printf(s);
-        free(s);
-        return c;
+        return n|7;
 }
