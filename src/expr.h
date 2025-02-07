@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <ctype.h>
 
@@ -56,16 +57,20 @@ struct KEY
 
 extern char * src;
 extern int tok;
-void next();
-void expr();
-void cleanup();
+void compiler(char *);
+
+typedef struct
+{
+        uint8_t data[256];
+        uint8_t sp;
+} Stack;
 
 typedef struct VAR
 {
         int size;
         int bpoff;
-        int is_constant;
-        int assigned;
+        bool con;
+        bool assigned;
         char * name;
         struct VAR * next;
 } Variable;

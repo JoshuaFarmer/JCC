@@ -1,1 +1,6 @@
-1+1
+extern putchar(c);
+
+main(c,v)
+{
+        putchar(65);
+}
