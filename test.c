@@ -1,6 +1,12 @@
 extern printf(c);
 
-main(c,v)
+/*
+        we dont have return types
+        or argument types...
+        (but u can make them const)
+*/
+
+main(const c, const v)
 {
         int n;
         n = 0;
@@ -8,5 +14,5 @@ main(c,v)
         {
                 n=n+1;
         }
-        return n|7;
+        return n;
 }

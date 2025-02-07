@@ -124,6 +124,17 @@ void clean()
         bpoff=4;
 }
 
+void synerr(const char *format, ...)
+{
+        va_list args;
+        va_start(args, format);
+        printf("hey, dumbass -> ");
+        vprintf(format, args);
+        printf("\n");
+        va_end(args);
+        exit(1);
+}
+
 Variable * cvar(int size, char * name, int is_const)
 {
         fprintf(fo,"\tsub esp,%d\n",size);
@@ -142,6 +153,10 @@ Variable * cvar(int size, char * name, int is_const)
 
 Variable * gvar(const char * name)
 {
+        if (!*name)
+        {
+                return NULL;
+        }
         Variable * x = list.next;
         while (x != NULL)
         {
@@ -151,7 +166,6 @@ Variable * gvar(const char * name)
                 }
                 x=x->next;
         }
-
         return NULL;
 }
 
@@ -235,6 +249,7 @@ void create_arguments()
                 if (tok == TOK_IDE)
                 {
                         Variable * x = cvar(4, id, c);
+                        x->assigned=1;
                         emit("\tmov eax,[ebp+%d]\n",bpoff);
                         emit("\tmov [ebp-%d],eax\n",x->bpoff);
                         start+=4;
@@ -267,8 +282,10 @@ void body()
 {
         use_eax = 1;
         while (tok != '{') next();
-        while (tok != '}') expr();
-        next();
+        while (tok != '}')
+        {
+                expr();
+        }
         use_eax = 1;
 }
 
@@ -360,6 +377,7 @@ void expr()
                         emit("\ttest eax,eax\n");
                         emit("\tjz .M%d\n",end);
                         body();
+                        next();
                         emit("\tjmp .M%d\n",label);
                         emit(".M%d:\n",end);
                 } break;
@@ -378,6 +396,7 @@ void expr()
                         emit("\ttest eax,eax\n");
                         emit("\tjz .M%d\n",end);
                         body();
+                        next();
                         emit(".M%d:\n",end);
                 } break;
 
@@ -397,7 +416,7 @@ void expr()
                                 next();
                                 create_arguments();
                                 body();
-                                emit("%s.exit:\n",nam);
+                                emit(".exit:\n",nam);
                                 emit("\tmov esp,ebp\n");
                                 emit("\tpop ebp\n");
                                 emit("\tret\n");
@@ -417,10 +436,7 @@ void expr()
                                 Variable * var = gvar(id);
                                 if (!var)
                                 {
-                                        /* TODO - PANIC */
-                                        vars();
-                                        printf("`%s` not found\n",id);
-                                        return;
+                                        synerr("variable '%s' not found", id);
                                 }
                                 switch (var->size)
                                 {
@@ -447,16 +463,14 @@ void expr()
                                 bool is_ptr = get_var_name();
                                 if (is_ptr)
                                 {
-                                        /* TODO - PANIC */
-                                        return;
+                                        synerr("syntax error, what did you even do? &*variable what the fuck");
                                 }
 
                                 PopID();
                                 Variable * var = gvar(id);
                                 if (!var)
                                 {
-                                        /* TODO - PANIC */
-                                        return;
+                                        synerr("variable '%s' not found", id);
                                 }
                                 emit("\tlea eax,[ebp-%d] \n",var->bpoff);
                         }
@@ -525,6 +539,7 @@ void expr()
                 {
                         expr();
                         emit("\tjmp .exit\n");
+                        return;
                 } break;
 
                 case '=':
@@ -535,9 +550,15 @@ void expr()
                         expr();
 
                         Variable * var = gvar(name);
-                        if (!var || (var->con && var->assigned))
+                        if (!var)
                         {
-                                /* TODO - PANIC */
+                                synerr("variable '%s' not found", name);
+                                return;
+                        }
+
+                        if (var->con && var->assigned)
+                        {
+                                synerr("can't assign to '%s', it's a constant", var->name);
                                 return;
                         }
 

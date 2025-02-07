@@ -29,9 +29,7 @@ main:
 	jmp .M0
 .M1:
 	mov eax,[ebp-12]
-	mov ebx,7
-	or eax,ebx
-main.exit:
+.exit:
 	mov esp,ebp
 	pop ebp
 	ret
