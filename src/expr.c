@@ -314,7 +314,25 @@ void expr()
                         emit("\textern %s\n",id);
                         skip_til(')');
                 } break;
-                
+
+                case '<':
+                {
+                        expr();
+                        emit("\tsub eax,ebx\n");
+                        emit("\tcmp eax,0\n");
+                        emit("\tsetl al\n");
+                        emit("\tmovzx eax,al\n");
+                } break;
+
+                case '>':
+                {
+                        expr();
+                        emit("\tsub eax,ebx\n");
+                        emit("\tcmp eax,0\n");
+                        emit("\tsetg al\n");
+                        emit("\tmovzx eax,al\n");
+                } break;
+
                 case TOK_EQ:
                 {
                         expr();
@@ -453,8 +471,48 @@ void expr()
                         else
                         {
                                 expr();
-                                emit("\tand eax,ebx\n");
+                                emit("\timul eax,ebx\n");
                         }
+                } break;
+
+                case '/':
+                {
+                        expr();
+                        emit("\tcdq\n");
+                        emit("\tidiv ebx\n");
+                } break;
+
+                case '%':
+                {
+                        expr();
+                        emit("\tcdq\n");
+                        emit("\tidiv ebx\n");
+                        emit("\tmov eax,edx\n");
+                } break;
+
+                case '|':
+                {
+                        expr();
+                        emit("\tor eax,ebx\n");
+                } break;
+
+                case '^':
+                {
+                        expr();
+                        emit("\txor eax,ebx\n");
+                } break;
+
+                case '~':
+                {
+                        expr();
+                        emit("\tnot eax\n");
+                } break;
+
+                case '!':
+                {
+                        expr();
+                        emit("\txor eax,1\n");
+                        emit("\tand eax,1\n");
                 } break;
 
                 case TOK_RETURN:
