@@ -68,7 +68,7 @@ typedef struct VAR
         int assigned;
         char * name;
         struct VAR * next;
-} VAR;
+} Variable;
 
 #ifdef _expr_
 struct KEY keys[]=

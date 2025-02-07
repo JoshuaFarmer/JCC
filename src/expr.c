@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
-VAR  list;
+Variable list;
 char *src;
 char ident[64];
 int  tok,num;
@@ -107,8 +107,8 @@ void emit(const char *format, ...)
 
 void cleanup()
 {
-        VAR * x = list.next;
-        VAR * prev = NULL;
+        Variable * x = list.next;
+        Variable * prev = NULL;
         while (x != NULL)
         {
                 if (prev)
@@ -122,10 +122,10 @@ void cleanup()
         bpoff=4;
 }
 
-VAR * create_var(int size, char * name, int is_const)
+Variable * create_Variable(int size, char * name, int is_const)
 {
         fprintf(fo,"SUB ESP,%d\n",size);
-        VAR * new = malloc(sizeof(VAR));
+        Variable * new = malloc(sizeof(Variable));
         if (!new) exit(2);
         new->is_constant=is_const;
         new->name=strdup(name);
@@ -138,9 +138,9 @@ VAR * create_var(int size, char * name, int is_const)
         return new;
 }
 
-VAR * get_var(const char * name)
+Variable * get_Variable(const char * name)
 {
-        VAR * x = list.next;
+        Variable * x = list.next;
         while (x != NULL)
         {
                 if (strncmp(name,x->name,32)==0)
@@ -153,9 +153,9 @@ VAR * get_var(const char * name)
         return NULL;
 }
 
-void dumpvars()
+void dumpVariables()
 {
-        VAR * x = list.next;
+        Variable * x = list.next;
         while (x != NULL)
         {
                 printf("sizeof(%s)==%d,const=%d,bpoff=%d\n",x->name,x->size,x->is_constant,x->bpoff);
