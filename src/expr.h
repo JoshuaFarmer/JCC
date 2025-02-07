@@ -43,6 +43,9 @@ enum
         TOK_VOID,
         TOK_WHILE,
         TOK_IDE,
+        TOK_EQ,
+        TOK_NEQ,
+        TOK_NUM,
 };
 
 struct KEY
@@ -66,5 +69,42 @@ typedef struct VAR
         char * name;
         struct VAR * next;
 } VAR;
+
+#ifdef _expr_
+struct KEY keys[]=
+{
+        {.text="auto",TOK_AUTO},
+        {.text="break",TOK_BREAK},
+        {.text="case",TOK_CASE},
+        {.text="char",TOK_CHAR},
+        {.text="const",TOK_CONST},
+        {.text="continue",TOK_CONTINUE},
+        {.text="default",TOK_DEFAULT},
+        {.text="do",TOK_DO},
+        {.text="double",TOK_DOUBLE},
+        {.text="else",TOK_ELSE},
+        {.text="enum",TOK_ENUM},
+        {.text="extern",TOK_EXTERN},
+        {.text="float",TOK_FLOAT},
+        {.text="for",TOK_FOR},
+        {.text="goto",TOK_GOTO},
+        {.text="if",TOK_IF},
+        {.text="int",TOK_INT},
+        {.text="long",TOK_LONG},
+        {.text="register",TOK_REGISTER},
+        {.text="return",TOK_RETURN},
+        {.text="short",TOK_SHORT},
+        {.text="signed",TOK_SIGNED},
+        {.text="sizeof",TOK_SIZEOF},
+        {.text="static",TOK_STATIC},
+        {.text="struct",TOK_STRUCT},
+        {.text="switch",TOK_SWITCH},
+        {.text="typedef",TOK_TYPEDEF},
+        {.text="union",TOK_UNION},
+        {.text="unsigned",TOK_UNSIGNED},
+        {.text="void",TOK_VOID},
+        {.text="while",TOK_WHILE},
+};
+#endif
 
 #endif
