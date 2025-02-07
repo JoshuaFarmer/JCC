@@ -47,7 +47,7 @@ void skip_comment()
 
 void skip_whitespace()
 {
-        while (*src == ' ' || *src == '\t' || *src == '\n') src++;
+        while (*src == ' ' || *src == '\t' || *src == '\n' || *src == '\r') src++;
 }
 
 void next()
