@@ -115,13 +115,28 @@ void clean()
         {
                 if (prev)
                 {
-                        free(prev->name);
+                        if (prev->name)
+                        {
+                                free(prev->name);
+                                prev->name = NULL;
+                        }
                         free(prev);
+                        prev = NULL;
                 }
-                prev=x;
-                x=x->next;
+                prev = x;
+                x = x->next;
         }
-        bpoff=4;
+        if (prev)
+        {
+                if (prev->name) {
+                        free(prev->name);
+                        prev->name = NULL;
+                }
+                free(prev);
+                prev = NULL;
+        }
+        list.next=NULL;
+        bpoff = 4;
 }
 
 void synerr(const char *format, ...)
@@ -268,23 +283,33 @@ int collect_arguments()
         int c=0;
         while (*src && tok && tok != ')')
         {
-                expr();
-                emit("\tpush eax\n");
                 use_eax=1;
+                expr();
                 ++c;
         }
+        emit("\tpush eax\n");
         return c;
 }
 
 #define is_start() (use_eax)
 
+Stack stck;
+
 void body()
 {
+        static int level=1;
+        int mylevel=level++;
+        spush(&stck,mylevel);
         use_eax = 1;
         while (tok != '{') next();
         while (tok != '}')
         {
                 expr();
+        }
+        spop(&stck);
+        if (stop(&stck)!=mylevel)
+        {
+                tok=1;
         }
         use_eax = 1;
 }
@@ -322,6 +347,7 @@ void expr()
                                         case TOK_SHORT: cvar(2, id, con); break;
                                         case TOK_CHAR:  cvar(1, id, con); break;
                                 }
+                                con=0;
                         }
                 } break;
 
@@ -377,9 +403,9 @@ void expr()
                         emit("\ttest eax,eax\n");
                         emit("\tjz .M%d\n",end);
                         body();
-                        next();
                         emit("\tjmp .M%d\n",label);
                         emit(".M%d:\n",end);
+                        return;
                 } break;
 
                 case TOK_BREAK:
@@ -396,7 +422,6 @@ void expr()
                         emit("\ttest eax,eax\n");
                         emit("\tjz .M%d\n",end);
                         body();
-                        next();
                         emit(".M%d:\n",end);
                 } break;
 
@@ -450,6 +475,11 @@ void expr()
                 } break;
 
                 case ',':
+                {
+                        emit("\tpush eax\n");
+                        use_eax = 1;
+                        return;
+                } break;
                 case ';':
                 {
                         use_eax = 1;

@@ -110,6 +110,21 @@ struct KEY keys[]=
         {.text="void",TOK_VOID},
         {.text="while",TOK_WHILE},
 };
+
+void spush(Stack * stck, int x)
+{
+        stck->data[stck->sp++]=x;
+}
+
+int spop(Stack * stck)
+{
+        return stck->data[--stck->sp];
+}
+
+int stop(Stack * stck)
+{
+        return stck->data[stck->sp-1];
+}
 #endif
 
 #endif

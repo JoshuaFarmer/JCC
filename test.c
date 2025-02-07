@@ -14,5 +14,10 @@ main(const c, const v)
         {
                 n=n+1;
         }
-        return n;
+        return foo(2,1);
+}
+
+foo(a, b)
+{
+        return a - b;
 }
