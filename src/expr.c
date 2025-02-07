@@ -127,6 +127,7 @@ int get_i()
 
 int start=1;
 VAR * list = NULL;
+int bpoff=4;
 
 void cleanup()
 {
@@ -142,9 +143,8 @@ void cleanup()
                 prev=x;
                 x=x->next;
         }
+        bpoff=4;
 }
-
-int bpoff=4;
 
 VAR * create_var(int size, char * name, int is_const)
 {
@@ -159,6 +159,7 @@ VAR * create_var(int size, char * name, int is_const)
                 list->next=NULL;
                 list->assigned=0;
                 list->bpoff=bpoff;
+                bpoff+=size;
                 return list;
         }
 
@@ -357,22 +358,23 @@ void expr()
                 } break;
                 case TOK_IDE:
                 {
+                        char name[sizeof(ident)];
+                        strcpy(name,ident);
                         char * tmp = src;
                         int t = tok;
                         next();
                         int newTok=tok;
+                        next();
+                        int newTok2=tok;
                         src=tmp;
                         tok=t;
                         if (newTok=='(')
                         {
-                                char name[sizeof(ident)];
-                                strcpy(name,ident);
-
                                 tmp = src;
                                 while (tok != '(' && tok) next();
                                 while (tok != ')' && tok) next();
                                 next();
-                                if (typeofnext() == '{')
+                                if (tok == '{')
                                 {
                                         src=tmp;
                                         cleanup();
@@ -380,7 +382,7 @@ void expr()
                                         fprintf(fo,"PUSH EBP\n");
                                         fprintf(fo,"MOV EBP,ESP\n");
                                         while (tok != '(' && tok) next();
-                                        int off = 4;
+                                        int off=8;
                                         while (tok != ')' && tok)
                                         {
                                                 next();
@@ -389,14 +391,15 @@ void expr()
                                                         VAR * x = create_var(4,ident,0);
                                                         fprintf(fo,"MOV EAX,DWORD[EBP+%d]\n",off);
                                                         fprintf(fo,"MOV DWORD[EBP-%d],EAX\n",x->bpoff);
-                                                        off+=4;
                                                         is_const = 0;
+                                                        off+=4;
                                                 }
                                                 else if (tok == TOK_CONST)
                                                 {
                                                         is_const = 1;
                                                 }
                                         }
+                                        bpoff+=4;
                                         block();
                                         fprintf(fo,".EXIT:\n");
                                         fprintf(fo,"MOV ESP,EBP\n");
@@ -424,7 +427,7 @@ void expr()
                         else if (newTok == ':')
                         {
                                 next();
-                                fprintf(fo,"%s:\n",ident);
+                                fprintf(fo,"%s:\n",name);
                                 return;
                         }
                         if (newTok=='=') return;

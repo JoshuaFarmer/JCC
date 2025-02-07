@@ -9,22 +9,7 @@ extern exit();
    you just need to remember to exit from them
    lmao
 */
-error:
-        putchar(69);
-        exit(1);
-
 main(c,v)
 {
-        /* test */
-        char * s = malloc(13);
-        if (!s)
-        {
-                goto error;
-                /* you could also call it with `error();` */
-        }
-        *s = 65;
-        *(s+1) = 0;
-        printf(s);
-        free(s);
-        return c;
+        printf(*v);
 }
