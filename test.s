@@ -12,7 +12,7 @@ main:
 	mov [ebp-8],eax
 	sub esp,4
 	mov eax,0
-	mov [ebp-12],eax 
+	mov [ebp-12],eax
 .M0:
 	mov eax,[ebp-12]
 	mov ebx,10
@@ -25,7 +25,7 @@ main:
 	mov eax,[ebp-12]
 	mov ebx,1
 	add eax,ebx
-	mov [ebp-12],eax 
+	mov [ebp-12],eax
 	jmp .M0
 .M1:
 	mov eax,[ebp-12]
