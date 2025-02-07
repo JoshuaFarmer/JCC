@@ -1,11 +1,5 @@
 extern printf(c);
 
-/*
-        we dont have return types
-        or argument types...
-        (but u can make them const)
-*/
-
 main(const c, const v)
 {
         int n;
@@ -14,7 +8,7 @@ main(const c, const v)
         {
                 n=n+1;
         }
-        return foo(2,1);
+        return foo(2,1); /* it pushes in reverse order, and idk how to fix it */
 }
 
 foo(a, b)
