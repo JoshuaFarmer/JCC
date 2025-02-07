@@ -433,6 +433,7 @@ void expr()
                         }
                 } break;
 
+                case ',':
                 case ';':
                 {
                         use_eax = 1;
