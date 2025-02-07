@@ -54,11 +54,9 @@ int main(int argc, char ** argv)
 		return(1);
 	}
 
-        fprintf(fo,"section .text\n");
-        fprintf(fo,"global main\n");
-	src=Buffer;
-        while (*src)
-                expr();
+        fprintf(fo,"\tsection .text\n");
+        fprintf(fo,"\tglobal main\n");
+        compiler(Buffer);
 	free(Buffer);
 	fclose(sourceFp);
 	return(0);
