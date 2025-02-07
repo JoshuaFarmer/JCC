@@ -9,6 +9,7 @@ char id[64];
 int  tok,num;
 int  bpoff=4;
 int  use_eax=1;
+int  m = 0;
 
 char    id_stack[256][64];
 uint8_t id_stack_ptr = 0;
@@ -164,16 +165,6 @@ void vars()
         }
 }
 
-void block()
-{
-        while (tok != '{' && tok)
-                next();
-        while (tok != '}' && tok)
-                expr();
-        next();
-        use_eax=1;
-}
-
 bool get_var_name()
 {
         bool is_ptr = false;
@@ -244,7 +235,7 @@ void create_arguments()
                 if (tok == TOK_IDE)
                 {
                         Variable * x = cvar(4, id, c);
-                        emit("\tmov eax,[ebp+%d]\n",start);
+                        emit("\tmov eax,[ebp+%d]\n",bpoff);
                         emit("\tmov [ebp-%d],eax\n",x->bpoff);
                         start+=4;
                         c = 0;
@@ -257,22 +248,24 @@ void create_arguments()
         }
 }
 
-void collect_arguments()
+int collect_arguments()
 {
         int c=0;
-        int start = 4;
         while (*src && tok && tok != ')')
         {
                 expr();
                 emit("\tpush eax\n");
                 use_eax=1;
+                ++c;
         }
+        return c;
 }
 
 #define is_start() (use_eax)
 
 void body()
 {
+        use_eax = 1;
         while (tok != '{') next();
         while (tok != '}') expr();
         next();
@@ -321,12 +314,61 @@ void expr()
                         emit("\textern %s\n",id);
                         skip_til(')');
                 } break;
+                
+                case TOK_EQ:
+                {
+                        expr();
+                        emit("\tsub eax,ebx\n");
+                        emit("\tcmp eax,0\n");
+                        emit("\tsete al\n");
+                        emit("\tmovzx eax,al\n");
+                } break;
+
+                case TOK_NEQ:
+                {
+                        expr();
+                        emit("\tsub eax,ebx\n");
+                        emit("\tcmp eax,0\n");
+                        emit("\tsetne al\n");
+                        emit("\tmovzx eax,al\n");
+                } break;
+
+                case TOK_WHILE:
+                {
+                        int label = m++;
+                        int end = m++;
+                        emit(".M%d:\n",label);
+                        expr();
+                        emit("\ttest eax,eax\n");
+                        emit("\tjz .M%d\n",end);
+                        body();
+                        emit("\tjmp .M%d\n",label);
+                        emit(".M%d:\n",end);
+                } break;
+
+                case TOK_BREAK:
+                {
+                        emit("\tjmp .M%d\n",m-2);
+                } break;
+
+                case TOK_IF:
+                {
+                        int label = m++;
+                        int end = m++;
+                        emit(".M%d:\n",label);
+                        expr();
+                        emit("\ttest eax,eax\n");
+                        emit("\tjz .M%d\n",end);
+                        body();
+                        emit(".M%d:\n",end);
+                } break;
 
                 case TOK_IDE:
                 {
                         PushID();
                         if (is_function_declaration())
                         {
+                                clean();
                                 PopID();
                                 char nam[64];
                                 strcpy(nam,id);
@@ -347,8 +389,9 @@ void expr()
                                 PopID();
                                 char nam[64];
                                 strcpy(nam,id);
-                                collect_arguments();
+                                int argc = collect_arguments();
                                 emit("\tcall %s\n",nam);
+                                emit("\tadd esp,%d\n",4*argc);
                         }
                         else if (!is_assignment())
                         {
@@ -362,7 +405,8 @@ void expr()
                                         return;
                                 }
                                 emit("\tmov e%cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff);
-                                PushID();
+                                use_eax=0;
+                                expr();
                         }
                 } break;
 
@@ -397,6 +441,26 @@ void expr()
                                 expr();
                                 emit("\tand eax,ebx\n");
                         }
+                } break;
+
+                case '*':
+                {
+                        if (is_start())
+                        {
+                                expr();
+                                emit("\tmov eax,[eax]\n");
+                        }
+                        else
+                        {
+                                expr();
+                                emit("\tand eax,ebx\n");
+                        }
+                } break;
+
+                case TOK_RETURN:
+                {
+                        expr();
+                        emit("\tjmp .exit\n");
                 } break;
 
                 case '=':

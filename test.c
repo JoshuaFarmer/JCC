@@ -1,6 +1,12 @@
-extern putchar(c);
+extern printf(c);
 
 main(c,v)
 {
-        putchar(65);
+        int n;
+        n = 0;
+        while (n!=10)
+        {
+                n=n+1;
+        }
+        return n;
 }
