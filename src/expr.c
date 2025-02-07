@@ -422,7 +422,12 @@ void expr()
                                         printf("`%s` not found\n",id);
                                         return;
                                 }
-                                emit("\tmov e%cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff);
+                                switch (var->size)
+                                {
+                                        case 4:emit("\tmov e%cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
+                                        case 2:emit("\tmov %cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
+                                        case 1:emit("\tmov %cl,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
+                                }
                                 use_eax=0;
                                 expr();
                         }
@@ -535,7 +540,12 @@ void expr()
                                 return;
                         }
 
-                        emit("\tmov [ebp-%d],eax \n",var->bpoff);
+                        switch (var->size)
+                        {
+                                case 4:emit("\tmov [ebp-%d],eax\n",var->bpoff); break;
+                                case 2:emit("\tmov [ebp-%d],ax\n",var->bpoff); break;
+                                case 1:emit("\tmov [ebp-%d],al\n",var->bpoff); break;
+                        }
                         var->assigned = true;
                 } break;
 
