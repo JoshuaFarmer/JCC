@@ -2,6 +2,9 @@ extern printf(c);
 
 main(const c, const v)
 {
+        void * p;
+        p = v+4; /*argv[1] (arrays dont exist yet)*/
+        printf(*p);
         int n;
         n = 0;
         while (n<10)

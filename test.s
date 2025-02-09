@@ -11,10 +11,20 @@ main:
 	mov eax,[ebp+12]
 	mov [ebp-8],eax
 	sub esp,4
-	mov eax,0
+	mov eax,[ebp-8]
+	mov ebx,4
+	add eax,ebx
 	mov [ebp-12],eax
-.M0:
 	mov eax,[ebp-12]
+	mov eax,[eax]
+	push eax
+	call printf
+	add esp,4
+	sub esp,4
+	mov eax,0
+	mov [ebp-16],eax
+.M0:
+	mov eax,[ebp-16]
 	mov ebx,10
 	sub eax,ebx
 	cmp eax,0
@@ -22,10 +32,10 @@ main:
 	movzx eax,al
 	test eax,eax
 	jz .M1
-	mov eax,[ebp-12]
+	mov eax,[ebp-16]
 	mov ebx,1
 	add eax,ebx
-	mov [ebp-12],eax
+	mov [ebp-16],eax
 	jmp .M0
 .M1:
 	mov eax,2

@@ -334,6 +334,7 @@ void expr()
                 case TOK_INT:
                 case TOK_SHORT:
                 case TOK_CHAR:
+                case TOK_VOID:
                 {
                         int type = tok;
                         bool is_ptr = get_var_name();
@@ -346,6 +347,7 @@ void expr()
                                         case TOK_INT:   cvar(4, id, con); break;
                                         case TOK_SHORT: cvar(2, id, con); break;
                                         case TOK_CHAR:  cvar(1, id, con); break;
+                                        case TOK_VOID:  synerr("can't have void variable"); break;
                                 }
                                 con=0;
                         }
