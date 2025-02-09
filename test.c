@@ -8,7 +8,12 @@ main(const c, const v)
         {
                 n=n+1;
         }
-        return foo(2,1); /* it pushes in reverse order, and idk how to fix it */
+        /*
+           it pushes arguments in reverse order,
+           and idk how to fix it (So this returns 255
+           insteaed of 1)
+        */
+        return foo(2,1);
 }
 
 foo(a, b)
