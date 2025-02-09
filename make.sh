@@ -6,6 +6,5 @@ gcc -g "bin/main_x86.o" "bin/expr_x86.o" -o "bin/jcc-i386"
 if [ $? -eq 0 ]; then
         nasm test.s -o test.o -felf32
         gcc test.o -o test -m32
-        ./test 2
-        echo $?
+        ./test
 fi

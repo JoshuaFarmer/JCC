@@ -56,7 +56,58 @@ void next()
         skip_whitespace();
         skip_comment();
         memset(id,0,sizeof(id));
-        if (isalpha(*src))
+        if (*src == '\'')
+        {
+                ++src;
+                tok=TOK_NUM;
+                num=*src;
+                ++src;
+                return;
+        }
+        else if (*src == '"')
+        {
+                ++src;
+                int x = 0;
+                while (*src != '"')
+                {
+                        if (*src == '\\')
+                        {
+                                ++src;
+                                switch (*src)
+                                {
+                                        case 'n':
+                                                id[x]='\n';
+                                                break;
+                                        case 'r':
+                                                id[x]='\r';
+                                                break;
+                                        case 'a':
+                                                id[x]=7;
+                                                break;
+                                        case 'b':
+                                                id[x]=8;
+                                                break;
+                                        case '0':
+                                                id[x]=0;
+                                                break;
+                                        case 'e':
+                                                id[x]=27;
+                                                break;
+                                }
+                                ++x;
+                                ++src;
+                        }
+                        else
+                        {
+                                id[x++]=*(src++);
+                        }
+                }
+
+                tok=TOK_STR;
+                ++src;
+                return;
+        }
+        else if (isalpha(*src))
         {
                 int i = 0;
                 while (isalnum(*src) && i < 31) {
@@ -107,7 +158,37 @@ void emit(const char *format, ...)
         va_end(args);
 }
 
-void clean()
+STRING strings = {.next=NULL,.text=""};
+
+int str_count=0;
+
+STRING * new_string()
+{
+        STRING * x = malloc(sizeof(STRING));
+        if (!x) exit(2);
+        memcpy(x->text,id,sizeof(id));
+        x->next = strings.next;
+        strings.next = x;
+        ++str_count;
+        return x;
+}
+
+void clean_strings()
+{
+        STRING * x = strings.next;
+        STRING * p = NULL;
+        while (x)
+        {
+                if (p)
+                {
+                        free(p);
+                }
+                p = x;
+                x = x->next;
+        }
+}
+
+void clean_vars()
 {
         Variable * x = list.next;
         Variable * prev = NULL;
@@ -137,6 +218,12 @@ void clean()
         }
         list.next=NULL;
         bpoff = 4;
+}
+
+void clean()
+{
+        clean_vars();
+        clean_strings();
 }
 
 void synerr(const char *format, ...)
@@ -329,6 +416,12 @@ void expr()
                 case TOK_CONST:
                 {
                         con=1;
+                } break;
+
+                case TOK_STR:
+                {
+                        STRING * x = new_string();
+                        emit("\tmov e%cx,lit_%d\n",(use_eax)?'a':'b',str_count-1);
                 } break;
 
                 case TOK_INT:
@@ -632,6 +725,19 @@ void compiler(char * buff)
         while (*src)
         {
                 expr();
+        }
+        emit("\tsection .data\n");
+        STRING * x = strings.next;
+        int c=0;
+        while (x)
+        {
+                emit("lit_%d: db ",c++);
+                for (int i = 0; i < strlen(x->text); ++i)
+                {
+                        emit("%d, ", x->text[i]);
+                }
+                emit("0");
+                x = x->next;
         }
         clean();
 }

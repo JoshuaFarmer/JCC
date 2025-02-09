@@ -47,6 +47,7 @@ enum
         TOK_EQ,
         TOK_NEQ,
         TOK_NUM,
+        TOK_STR,
 };
 
 struct KEY
@@ -54,6 +55,12 @@ struct KEY
         char * text;
         int    tok;
 };
+
+typedef struct STRING
+{
+        char text[64];
+        struct STRING * next;
+} STRING;
 
 extern char * src;
 extern int tok;
