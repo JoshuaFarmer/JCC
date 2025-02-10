@@ -75,6 +75,8 @@ enum TOK_KEYWORD
         TOK_NEQ,
         TOK_LEQ,
         TOK_GEQ,
+        TOK_CHAIN,
+        TOK_CHAIN_OR,
         TOK_NUM,
         TOK_STR,
 };

@@ -262,6 +262,47 @@ void expr()
                         emit("\textern %s\n",id);
                         skip_til(')');
                 } break;
+                
+                case TOK_CHAIN_OR:
+                {
+                        int true_label = m++;
+                        int end = m++;
+                        int type_b = pop_type();
+                        int type_a = pop_type();
+                        typeCheck(type_a, type_b);
+
+                        emit("\ttest eax,eax\n");
+                        emit("\tjnz L%d\n", true_label);
+                        use_eax = 1;
+                        expr();
+                        emit("\ttest eax,eax\n");
+                        emit("\tjnz L%d\n", true_label);
+                        emit("\tjmp L%d\n", end);
+                        emit("L%d:\n", true_label);
+                        emit("\tmov eax,1\n");
+                        emit("L%d:\n", end);
+                } break;
+
+                case TOK_CHAIN:
+                {
+                        int false_label = m++;
+                        int end = m++;
+                        int type_b = pop_type();
+                        int type_a = pop_type();
+                        typeCheck(type_a,type_b);
+
+                        emit("\ttest eax,eax\n");
+                        emit("\tjz L%d\n", false_label);
+                        use_eax = 1;
+                        expr();
+                        emit("\ttest eax,eax\n");
+                        emit("\tjz L%d\n", false_label);
+                        emit("\tmov eax,1\n");
+                        emit("\tjmp L%d\n", end);
+                        emit("L%d:\n", false_label);
+                        emit("\tmov eax,0\n");
+                        emit("L%d:\n", end);
+                } break;
 
                 case TOK_LEQ:
                 {

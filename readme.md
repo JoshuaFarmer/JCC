@@ -4,7 +4,7 @@ it works without an ast, as such order of operations is a bit whack<br>
 but thats not the point, so its fine<br>
 
 <h2>"Features"</h2>
-all logical && arithmetic operations (except for by LHS e.g. += or chained like &&/||)<br>
+all logical && arithmetic operations (except for by LHS e.g. +=)<br>
 extern (ignores args)<br>
 functions/function arguments (NOTE: passed backwards because idfk)<br>
 shorts, integers, chars and pointers<br>

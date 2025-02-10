@@ -120,7 +120,6 @@ void next()
                 tok = TOK_EQ;
                 return;
         }
-
         else if (*src == '>' && *(src+1) == '=')
         {
                 src += 2;
@@ -131,6 +130,18 @@ void next()
         {
                 src += 2;
                 tok = TOK_LEQ;
+                return;
+        }
+        else if (*src == '&' && *(src+1) == '&')
+        {
+                src += 2;
+                tok = TOK_CHAIN;
+                return;
+        }
+        else if (*src == '|' && *(src+1) == '|')
+        {
+                src += 2;
+                tok = TOK_CHAIN_OR;
                 return;
         }
 
