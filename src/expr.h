@@ -10,7 +10,8 @@
 #include <string.h>
 #include <ctype.h>
 
-extern FILE * fo;
+FILE * fo;
+FILE * sf;
 
 enum
 {
@@ -66,7 +67,7 @@ typedef struct STRING
 
 extern char * src;
 extern int tok;
-void compiler(char *);
+void compiler(char *,char *);
 
 typedef struct
 {
@@ -902,9 +903,42 @@ void expr()
         }
 }
 
-void compiler(char * buff)
+void aerror()
 {
-        src=buff;
+	printf("One Or More Arguments Are Invalid.\n");
+	exit(1);
+}
+
+int flen(FILE * fp)
+{
+        fseek(fp, 0, SEEK_END);
+	int length=ftell(sf);
+	fseek(fp, 0, SEEK_SET);
+        return length;
+}
+
+void compiler(char * srcp, char * outp)
+{
+        sf = fopen(srcp,"r");
+	fo = fopen(outp,"w");
+	if (!sf||!fo)
+        {
+                aerror();
+        }
+
+	int len=flen(sf);
+	src = malloc(len+1);
+        if (!src)
+        {
+                return;
+        }
+
+        memset(src,0,len+1);
+	fread(src,1,len,sf);
+        char* bf=src;
+
+        emit("\tsection .text\n");
+        emit("\tglobal main\n");
 #ifdef ARCH_I386_JDECL
         emit("\tglobal _start\n");
         emit("_start:\n");
@@ -930,5 +964,9 @@ void compiler(char * buff)
                 emit("0");
                 x = x->next;
         }
+
         clean();
+	free(bf);
+	fclose(sf);
+	fclose(fo);
 }
