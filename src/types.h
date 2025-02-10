@@ -10,16 +10,30 @@
 #include <stdarg.h>
 #define is_start() (use_eax)
 
+const int SIZEOFS[] = {4,2,1,4,4,2,1,4};
+const char * TYPENAMES[] = {
+        "int",
+        "short",
+        "char",
+        "bcd",
+        "pointer",
+};
+
+#define SIZEOF(x) (SIZEOFS[x])
+#define TYPENAME(x) (TYPENAMES[x])
+#define TYPEISPTR(x) (x > TYPE_BCD)
+#define SaveIdAs(x) char x[sizeof(id)]; strcpy(x,id);
+
 typedef enum TYPE
 {
         TYPE_INT,
         TYPE_SHORT,
         TYPE_CHAR,
-        TYPE_BCD, /*don't ask*/
-        TYPE_CONST_INT,
-        TYPE_CONST_SHORT,
-        TYPE_CONST_CHAR,
-        TYPE_CONST_BCD, /*don't ask*/
+        TYPE_BCD,
+        TYPE_INT_PTR,
+        TYPE_SHORT_PTR,
+        TYPE_CHAR_PTR,
+        TYPE_BCD_PTR,
 } TYPE;
 
 enum TOK_KEYWORD
@@ -37,6 +51,7 @@ enum TOK_KEYWORD
         TOK_ENUM,
         TOK_EXTERN,
         TOK_FLOAT,
+        TOK_BCD,
         TOK_FOR,
         TOK_GOTO,
         TOK_IF,
@@ -82,10 +97,11 @@ typedef struct
 
 typedef struct VAR
 {
-        int size;
-        int bpoff;
+        int  size;
+        int  bpoff;
+        TYPE type;
         bool con;
-        bool assigned;
+        bool used;
         char * name;
         struct VAR * next;
 } VARIABLE;
@@ -105,6 +121,7 @@ struct KEYWORD keys[]=
         {.text="enum",TOK_ENUM},
         {.text="extern",TOK_EXTERN},
         {.text="float",TOK_FLOAT},
+        {.text="bcd",TOK_BCD},
         {.text="for",TOK_FOR},
         {.text="goto",TOK_GOTO},
         {.text="if",TOK_IF},

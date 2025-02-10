@@ -18,7 +18,7 @@ STACK    stck;
 
 bool ConstIsAssignable(VARIABLE * var)
 {
-        return var->con ? (var->con && !var->assigned) : true;
+        return var->con ? (var->con && !var->used) : true;
 }
 
 void emit(const char *format, ...)

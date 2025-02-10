@@ -79,8 +79,8 @@ void declare_function_args()
         {
                 if (tok == TOK_IDE)
                 {
-                        VARIABLE * x = cvar(4, id, c);
-                        x->assigned=1;
+                        VARIABLE * x = cvar(TYPE_INT, id, c);
+                        x->used=1;
                         emit("\tmov eax,[ebp+%d]\n",start);
                         emit("\tmov [ebp-%d],eax\n",x->bpoff);
                         start-=4;
@@ -104,8 +104,8 @@ void declare_function_args()
         {
                 if (tok == TOK_IDE)
                 {
-                        VARIABLE * x = cvar(4, id, c);
-                        x->assigned=1;
+                        VARIABLE * x = cvar(TYPE_INT, id, c);
+                        x->used=1;
                         emit("\tmov eax,[ebp+%d]\n",bpoff);
                         emit("\tmov [ebp-%d],eax\n",x->bpoff);
                         start+=4;
@@ -155,30 +155,47 @@ void body()
 void HandleAssignment()
 {
         PopID();
-        char name[64];
-        strcpy(name,id);
+        SaveIdAs(name);
         expr();
-
         VARIABLE * var = gvar(name);
-        if (!var)
-        {
-                synerr("VARIABLE '%s' not found", name);
-                return;
-        }
+        mov_variable_exx(var);
+}
 
-        if (!ConstIsAssignable(var))
+void HandleIdentifier()
+{
+        PushID();
+        SaveIdAs(nam);
+        if (is_function_declaration())
         {
-                synerr("can't assign to '%s', it's a constant", var->name);
-                return;
+                clean();
+                PopID();
+                emit("%s:\n",nam);
+                emit("\tpush ebp\n",nam);
+                emit("\tmov ebp,esp\n",nam);
+                next();
+                next();
+                declare_function_args();
+                body();
+                emit(".exit:\n",nam);
+                emit("\tmov esp,ebp\n");
+                emit("\tpop ebp\n");
+                emit("\tret\n");
         }
-
-        switch (var->size)
+        else if (is_function())
         {
-                case 4:emit("\tmov [ebp-%d],eax\n",var->bpoff); break;
-                case 2:emit("\tmov [ebp-%d],ax\n",var->bpoff); break;
-                case 1:emit("\tmov [ebp-%d],al\n",var->bpoff); break;
+                PopID();
+                int argc = call_function_args();
+                emit("\tcall %s\n",nam);
+                emit("\tadd esp,%d\n",4*argc);
         }
-        var->assigned = true;
+        else if (!is_assignment())
+        {
+                PopID();
+                VARIABLE * var = gvar(id);
+                mov_exx_variable(var);
+                push_type(var->type);
+                expr();
+        }
 }
 
 void expr()
@@ -191,7 +208,9 @@ void expr()
                 case TOK_NUM:
                 {
                         emit("\tmov e%cx,%d\n",(use_eax)?'a':'b',num);
+                        push_type(TYPE_INT);
                         use_eax=0;
+                        expr();
                 } break;
 
                 case TOK_CONST:
@@ -208,20 +227,30 @@ void expr()
                 case TOK_INT:
                 case TOK_SHORT:
                 case TOK_CHAR:
+                case TOK_BCD:
                 case TOK_VOID:
                 {
                         int type = tok;
                         bool is_ptr = get_var_name();
                         PopID();
-                        if (is_ptr) { cvar(4, id, CONSTANT); }
+                        if (is_ptr)
+                        {
+                                switch (type)
+                                {
+                                        case TOK_INT: cvar(TYPE_INT_PTR, id, CONSTANT);
+                                        case TOK_SHORT: cvar(TYPE_INT_PTR, id, CONSTANT);
+                                        case TOK_CHAR: cvar(TYPE_CHAR_PTR, id, CONSTANT);
+                                }
+                        }
                         else
                         {
                                 switch (type)
                                 {
-                                        case TOK_INT:   cvar(4, id, CONSTANT); break;
-                                        case TOK_SHORT: cvar(2, id, CONSTANT); break;
-                                        case TOK_CHAR:  cvar(1, id, CONSTANT); break;
-                                        case TOK_VOID:  synerr("can't have void VARIABLE"); break;
+                                        case TOK_INT:   cvar(TYPE_INT, id, CONSTANT); break;
+                                        case TOK_SHORT: cvar(TYPE_SHORT, id, CONSTANT); break;
+                                        case TOK_CHAR:  cvar(TYPE_CHAR, id, CONSTANT); break;
+                                        case TOK_BCD:  cvar(TYPE_BCD, id, CONSTANT); break;
+                                        case TOK_VOID:  synerr("can't have void variable"); break;
                                 }
                                 CONSTANT=false;
                         }
@@ -236,6 +265,9 @@ void expr()
 
                 case '<':
                 {
+                        int type_b = pop_type();
+                        int type_a = pop_type();
+                        typeCheck(type_a,type_b);
                         expr();
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
@@ -303,51 +335,7 @@ void expr()
 
                 case TOK_IDE:
                 {
-                        PushID();
-                        if (is_function_declaration())
-                        {
-                                clean();
-                                PopID();
-                                char nam[64];
-                                strcpy(nam,id);
-                                emit("%s:\n",nam);
-                                emit("\tpush ebp\n",nam);
-                                emit("\tmov ebp,esp\n",nam);
-                                next();
-                                next();
-                                declare_function_args();
-                                body();
-                                emit(".exit:\n",nam);
-                                emit("\tmov esp,ebp\n");
-                                emit("\tpop ebp\n");
-                                emit("\tret\n");
-                        }
-                        else if (is_function())
-                        {
-                                PopID();
-                                char nam[64];
-                                strcpy(nam,id);
-                                int argc = call_function_args();
-                                emit("\tcall %s\n",nam);
-                                emit("\tadd esp,%d\n",4*argc);
-                        }
-                        else if (!is_assignment())
-                        {
-                                PopID();
-                                VARIABLE * var = gvar(id);
-                                if (!var)
-                                {
-                                        synerr("VARIABLE '%s' not found", id);
-                                }
-                                switch (var->size)
-                                {
-                                        case 4:emit("\tmov e%cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
-                                        case 2:emit("\tmov %cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
-                                        case 1:emit("\tmov %cl,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
-                                }
-                                use_eax=0;
-                                expr();
-                        }
+                        HandleIdentifier();
                 } break;
 
                 case ',':

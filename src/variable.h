@@ -1,6 +1,7 @@
 #ifndef VARIABLE_H
 #define VARIABLE_H
 
+#include <assert.h>
 
 void clean_vars()
 {
@@ -34,9 +35,9 @@ void clean_vars()
         bpoff = 4;
 }
 
-
-VARIABLE * cvar(int size, char * name, int is_const)
+VARIABLE * cvar(TYPE type, char * name, int is_const)
 {
+        int size = SIZEOF(type);
         fprintf(fo,"\tsub esp,%d\n",size);
         VARIABLE * new = malloc(sizeof(VARIABLE));
         if (!new) exit(2);
@@ -45,7 +46,8 @@ VARIABLE * cvar(int size, char * name, int is_const)
         new->next=list.next;
         new->bpoff=bpoff;
         new->size=size;
-        new->assigned=0;
+        new->used=0;
+        new->type=type;
         list.next=new;
         bpoff += size;
         return new;
@@ -66,6 +68,8 @@ VARIABLE * gvar(const char * name)
                 }
                 x=x->next;
         }
+
+        synerr("VARIABLE '%s' not found", name);
         return NULL;
 }
 
@@ -91,6 +95,56 @@ bool get_var_name()
 
         PushID();
         return is_ptr;
+}
+
+void mov_exx_variable(VARIABLE * var)
+{
+        switch (var->size)
+        {
+                case 4:emit("\tmov e%cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
+                case 2:emit("\tmov %cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
+                case 1:emit("\tmov %cl,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
+        }
+        use_eax=0;
+}
+
+void mov_variable_exx(VARIABLE * var)
+{
+        if (!ConstIsAssignable(var))
+        {
+                synerr("can't assign to '%s', it's a constant", var->name);
+                return;
+        }
+
+        switch (var->size)
+        {
+                case 4:emit("\tmov [ebp-%d],eax\n",var->bpoff); break;
+                case 2:emit("\tmov [ebp-%d],ax\n",var->bpoff); break;
+                case 1:emit("\tmov [ebp-%d],al\n",var->bpoff); break;
+        }
+        var->used = true;
+}
+
+TYPE    type_stack[256];
+uint8_t type_stackptr=0;
+
+void push_type(TYPE t)
+{
+        type_stack[type_stackptr++] = t;
+}
+
+TYPE pop_type()
+{
+        return type_stack[--type_stackptr];
+}
+
+void typeCheck(int a, int b)
+{
+        if (a == TYPE_BCD && b == TYPE_BCD) return;
+        else if (a == TYPE_BCD || b == TYPE_BCD)
+        {
+                synerr("Invalid BCD Type Usage");
+        }
 }
 
 #endif
