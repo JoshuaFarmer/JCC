@@ -73,6 +73,8 @@ enum TOK_KEYWORD
         TOK_IDE,
         TOK_EQ,
         TOK_NEQ,
+        TOK_LEQ,
+        TOK_GEQ,
         TOK_NUM,
         TOK_STR,
 };

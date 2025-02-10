@@ -263,6 +263,27 @@ void expr()
                         skip_til(')');
                 } break;
 
+                case TOK_LEQ:
+                {
+                        int type_b = pop_type();
+                        int type_a = pop_type();
+                        typeCheck(type_a,type_b);
+                        expr();
+                        emit("\tsub eax,ebx\n");
+                        emit("\tcmp eax,0\n");
+                        emit("\tsetle al\n");
+                        emit("\tmovzx eax,al\n");
+                } break;
+
+                case TOK_GEQ:
+                {
+                        expr();
+                        emit("\tsub eax,ebx\n");
+                        emit("\tcmp eax,0\n");
+                        emit("\tsetge al\n");
+                        emit("\tmovzx eax,al\n");
+                } break;
+
                 case '<':
                 {
                         int type_b = pop_type();

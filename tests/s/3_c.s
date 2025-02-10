@@ -4,11 +4,11 @@ main:
 	push ebp
 	mov ebp,esp
 	sub esp,4
-	mov eax,1
+	mov eax,3
 	mov ebx,2
 	sub eax,ebx
 	cmp eax,0
-	setl al
+	setge al
 	movzx eax,al
 	mov [ebp-4],eax
 	mov eax,[ebp-4]

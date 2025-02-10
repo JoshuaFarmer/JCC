@@ -121,6 +121,19 @@ void next()
                 return;
         }
 
+        else if (*src == '>' && *(src+1) == '=')
+        {
+                src += 2;
+                tok = TOK_GEQ;
+                return;
+        }
+        else if (*src == '<' && *(src+1) == '=')
+        {
+                src += 2;
+                tok = TOK_LEQ;
+                return;
+        }
+
         tok = *src++;
 }
 
