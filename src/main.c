@@ -1,15 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
-
-#ifdef ARCH_I386_CDECL
-        #include"i386_cdecl/expr.h"
-#else
-        #ifdef ARCH_I386_JDECL
-                #include"i386_jdecl/expr.h"
-        #endif
-#endif
-
+#include"expr.h"
 void aerror()
 {
 	printf("One Or More Arguments Are Invalid.\n");

@@ -480,6 +480,7 @@ bool is_function_declaration()
         return (tok == '{');
 }
 
+#ifdef ARCH_I386_JDECL
 void create_arguments()
 {
         int c=0;
@@ -520,6 +521,32 @@ void create_arguments()
                 next();
         }
 }
+#endif
+
+#ifdef ARCH_I386_CDECL
+void create_arguments()
+{
+        int c=0;
+        int start = 4;
+        while (*src && tok && tok != ')')
+        {
+                if (tok == TOK_IDE)
+                {
+                        Variable * x = cvar(4, id, c);
+                        x->assigned=1;
+                        emit("\tmov eax,[ebp+%d]\n",bpoff);
+                        emit("\tmov [ebp-%d],eax\n",x->bpoff);
+                        start+=4;
+                        c = 0;
+                }
+                else if (tok == TOK_CONST)
+                {
+                        c = 1;
+                }
+                next();
+        }
+}
+#endif
 
 int collect_arguments()
 {
@@ -878,12 +905,14 @@ void expr()
 void compiler(char * buff)
 {
         src=buff;
+#ifdef ARCH_I386_JDECL
         emit("\tglobal _start\n");
         emit("_start:\n");
         emit("\tcall main\n");
         emit("\tmov ebx,eax\n");
         emit("\tmov eax,1\n");
         emit("\tint 0x80\n");
+#endif
         while (*src)
         {
                 expr();
