@@ -10,7 +10,19 @@
 #include <stdarg.h>
 #define is_start() (use_eax)
 
-enum
+enum TYPE
+{
+        TYPE_INT,
+        TYPE_SHORT,
+        TYPE_CHAR,
+        TYPE_BCD, /*don't ask*/
+        TYPE_CONST_INT,
+        TYPE_CONST_SHORT,
+        TYPE_CONST_CHAR,
+        TYPE_CONST_BCD, /*don't ask*/
+};
+
+enum TOK_KEYWORD
 {
         TOK_AUTO=0x100,
         TOK_BREAK,
@@ -50,7 +62,7 @@ enum
         TOK_STR,
 };
 
-struct KEY
+struct KEYWORD
 {
         char * text;
         int    tok;
@@ -66,7 +78,7 @@ typedef struct
 {
         uint8_t data[256];
         uint8_t sp;
-} Stack;
+} STACK;
 
 typedef struct VAR
 {
@@ -78,7 +90,7 @@ typedef struct VAR
         struct VAR * next;
 } VARIABLE;
 
-struct KEY keys[]=
+struct KEYWORD keys[]=
 {
         {.text="auto",TOK_AUTO},
         {.text="break",TOK_BREAK},

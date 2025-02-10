@@ -18,17 +18,17 @@ void ClearID()
         memset(id_stack,0,sizeof(id_stack));
 }
 
-void spush(Stack * stck, int x)
+void spush(STACK * stck, int x)
 {
         stck->data[stck->sp++]=x;
 }
 
-int spop(Stack * stck)
+int spop(STACK * stck)
 {
         return stck->data[--stck->sp];
 }
 
-int stop(Stack * stck)
+int stop(STACK * stck)
 {
         return stck->data[stck->sp-1];
 }

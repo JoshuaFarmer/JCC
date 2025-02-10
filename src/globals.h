@@ -14,7 +14,7 @@ uint8_t  id_stack[256][64];
 uint8_t  id_stack_ptr = 0;
 int      str_count=0;
 STRING   strings = {.next=NULL,.text=""};
-Stack    stck;
+STACK    stck;
 
 void emit(const char *format, ...)
 {
