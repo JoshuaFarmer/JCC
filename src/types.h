@@ -71,6 +71,7 @@ enum TOK_KEYWORD
         TOK_UNSIGNED,
         TOK_VOID,
         TOK_WHILE,
+        TOK_ASM,
         TOK_IDE,
         TOK_EQ,
         TOK_NEQ,
@@ -145,6 +146,7 @@ struct KEYWORD keys[]=
         {.text="unsigned",TOK_UNSIGNED},
         {.text="void",TOK_VOID},
         {.text="while",TOK_WHILE},
+        {.text="asm",TOK_ASM},
 };
 
 #include "globals.h"

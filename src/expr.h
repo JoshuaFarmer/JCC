@@ -201,6 +201,7 @@ void HandleIdentifier()
 void expr()
 {
         static bool CONSTANT=false;
+        static bool IN_ASM=false;
         static TYPE CURRENT_TYPE=TYPE_INT;
         next();
         switch(tok)
@@ -220,8 +221,25 @@ void expr()
 
                 case TOK_STR:
                 {
-                        STRING * x = new_string();
-                        emit("\tmov e%cx,lit_%d\n",(use_eax)?'a':'b',str_count-1);
+                        if (!IN_ASM)
+                        {
+                                STRING * x = new_string();
+                                emit("\tmov e%cx,lit_%d\n",(use_eax)?'a':'b',str_count-1);
+                        }
+                        else
+                        {
+                                emit("\t%s\n",id);
+                                return;
+                        }
+                } break;
+
+                case TOK_ASM:
+                {
+                        IN_ASM = true;
+                        skip_til('(');
+                        expr();
+                        skip_til(')');
+                        IN_ASM = false;
                 } break;
 
                 case TOK_INT:

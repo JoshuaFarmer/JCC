@@ -88,7 +88,7 @@ void next()
                 while (isalnum(*src) && i < 31) {
                         id[i++] = *src++;
                 } id[i] = '\0';
-                for (int j = 0; j < 32; ++j)
+                for (int j = 0; j < sizeof(keys)/sizeof(struct KEYWORD); ++j)
                 {
                         if (strcmp(keys[j].text,id)==0)
                         {

@@ -8,7 +8,7 @@ FILE * fo;
 FILE * sf;
 VARIABLE list;
 bool     is_included = false;
-char   * src,id[128];
+char   * src,id[128],tmp[128];
 int      tok,num,bpoff=4;
 int      use_eax=1,m = 0;
 uint8_t  id_stack[256][64];
