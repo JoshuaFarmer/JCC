@@ -10,7 +10,7 @@
 #include <stdarg.h>
 #define is_start() (use_eax)
 
-enum TYPE
+typedef enum TYPE
 {
         TYPE_INT,
         TYPE_SHORT,
@@ -20,7 +20,7 @@ enum TYPE
         TYPE_CONST_SHORT,
         TYPE_CONST_CHAR,
         TYPE_CONST_BCD, /*don't ask*/
-};
+} TYPE;
 
 enum TOK_KEYWORD
 {

@@ -16,6 +16,11 @@ int      str_count=0;
 STRING   strings = {.next=NULL,.text=""};
 STACK    stck;
 
+bool ConstIsAssignable(VARIABLE * var)
+{
+        return var->con ? (var->con && !var->assigned) : true;
+}
+
 void emit(const char *format, ...)
 {
         va_list args;

@@ -152,9 +152,39 @@ void body()
         use_eax = 1;
 }
 
+void HandleAssignment()
+{
+        PopID();
+        char name[64];
+        strcpy(name,id);
+        expr();
+
+        VARIABLE * var = gvar(name);
+        if (!var)
+        {
+                synerr("VARIABLE '%s' not found", name);
+                return;
+        }
+
+        if (!ConstIsAssignable(var))
+        {
+                synerr("can't assign to '%s', it's a constant", var->name);
+                return;
+        }
+
+        switch (var->size)
+        {
+                case 4:emit("\tmov [ebp-%d],eax\n",var->bpoff); break;
+                case 2:emit("\tmov [ebp-%d],ax\n",var->bpoff); break;
+                case 1:emit("\tmov [ebp-%d],al\n",var->bpoff); break;
+        }
+        var->assigned = true;
+}
+
 void expr()
 {
-        static int con=0;
+        static bool CONSTANT=false;
+        static TYPE CURRENT_TYPE=TYPE_INT;
         next();
         switch(tok)
         {
@@ -166,7 +196,7 @@ void expr()
 
                 case TOK_CONST:
                 {
-                        con=1;
+                        CONSTANT=true;
                 } break;
 
                 case TOK_STR:
@@ -183,17 +213,17 @@ void expr()
                         int type = tok;
                         bool is_ptr = get_var_name();
                         PopID();
-                        if (is_ptr) { cvar(4, id, con); }
+                        if (is_ptr) { cvar(4, id, CONSTANT); }
                         else
                         {
                                 switch (type)
                                 {
-                                        case TOK_INT:   cvar(4, id, con); break;
-                                        case TOK_SHORT: cvar(2, id, con); break;
-                                        case TOK_CHAR:  cvar(1, id, con); break;
+                                        case TOK_INT:   cvar(4, id, CONSTANT); break;
+                                        case TOK_SHORT: cvar(2, id, CONSTANT); break;
+                                        case TOK_CHAR:  cvar(1, id, CONSTANT); break;
                                         case TOK_VOID:  synerr("can't have void VARIABLE"); break;
                                 }
-                                con=0;
+                                CONSTANT=false;
                         }
                 } break;
 
@@ -420,31 +450,7 @@ void expr()
 
                 case '=':
                 {
-                        PopID();
-                        char name[64];
-                        strcpy(name,id);
-                        expr();
-
-                        VARIABLE * var = gvar(name);
-                        if (!var)
-                        {
-                                synerr("VARIABLE '%s' not found", name);
-                                return;
-                        }
-
-                        if (var->con && var->assigned)
-                        {
-                                synerr("can't assign to '%s', it's a constant", var->name);
-                                return;
-                        }
-
-                        switch (var->size)
-                        {
-                                case 4:emit("\tmov [ebp-%d],eax\n",var->bpoff); break;
-                                case 2:emit("\tmov [ebp-%d],ax\n",var->bpoff); break;
-                                case 1:emit("\tmov [ebp-%d],al\n",var->bpoff); break;
-                        }
-                        var->assigned = true;
+                        HandleAssignment();
                 } break;
 
                 case '+':
