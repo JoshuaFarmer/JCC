@@ -9,7 +9,7 @@ _start:
 main:
 	push ebp
 	mov ebp,esp
-	mov eax,0
+	mov eax,1
 	test eax,eax
 	jz L0
 	mov eax,1
