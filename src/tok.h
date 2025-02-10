@@ -25,7 +25,6 @@ void skip_whitespace()
         while (*src == ' ' || *src == '\t' || *src == '\n' || *src == '\r') src++;
 }
 
-void clean_vars();
 void next()
 {
         num=0;
@@ -182,7 +181,6 @@ void next()
                         use_eax = 1;
                         compiler(Id,path);
                         is_included = false;
-                        clean_vars();
                         mainPath=oldpath1;
                         outPath=oldpath2;
                         fo=f;

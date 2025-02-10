@@ -1,7 +1,8 @@
-#include <5.h>
-#include <5_2.h>
+#include<5.h>
+extern printf();
 
 main()
 {
+        printf("hello\n");
         return foo();
 }

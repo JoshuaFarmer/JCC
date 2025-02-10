@@ -90,7 +90,7 @@ struct KEYWORD
 
 typedef struct STRING
 {
-        char text[64];
+        char text[128];
         struct STRING * next;
 } STRING;
 

@@ -47,24 +47,23 @@ void compiler(char * srcp, char * outp)
                 expr();
         }
 
-        if (!is_included)
+        emit("\tsection .data\n");
+        STRING * x = strings.next;
+        int c=0;
+        while (x)
         {
-                emit("\tsection .data\n");
-                STRING * x = strings.next;
-                int c=0;
-                while (x)
+                emit("lit_%d: db ",c++);
+                for (int i = 0; i < strlen(x->text); ++i)
                 {
-                        emit("lit_%d: db ",c++);
-                        for (int i = 0; i < strlen(x->text); ++i)
-                        {
-                                emit("%d, ", x->text[i]);
-                        }
-                        emit("0");
-                        x = x->next;
+                        emit("%d, ", x->text[i]);
                 }
-
-                clean();
+                emit("0");
+                x = x->next;
         }
+
+        if (is_included)
+                emit("\tsection .text\n");
+        clean();
 	free(bf);
 	fclose(sf);
 	fclose(fo);
