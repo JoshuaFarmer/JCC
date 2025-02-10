@@ -8,6 +8,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdarg.h>
+#include <libgen.h>
 #define is_start() (use_eax)
 
 const int SIZEOFS[] = {4,2,1,4,4,2,1,4};

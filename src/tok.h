@@ -2,6 +2,7 @@
 #define TOK_H
 
 #include "types.h"
+int counter = 0;
 
 void skip_comment()
 {
@@ -24,6 +25,7 @@ void skip_whitespace()
         while (*src == ' ' || *src == '\t' || *src == '\n' || *src == '\r') src++;
 }
 
+void clean_vars();
 void next()
 {
         num=0;
@@ -143,6 +145,54 @@ void next()
                 src += 2;
                 tok = TOK_CHAIN_OR;
                 return;
+        }
+
+        else if (*src == '#')
+        {
+                ++src;
+                if (strncmp(src,"include",7) == 0)
+                {
+                        src += 7;
+                        while (*src && *src != '<') ++src;
+                        if (!*src) return;
+                        ++src;
+                        int x = 0;
+                        while (*src != '>' && *src)
+                        {
+                                id[x++] = *(src++);
+                        }
+                        if (!*src) return;
+                        FILE * f = fo;
+                        FILE * fs = sf;
+                        char *oldpath1=mainPath;
+                        char *oldpath2=outPath;
+                        char *parent1 =dirname(strdup(oldpath1));
+                        char *parent2 =dirname(strdup(oldpath2));
+                        char *oldsrc=src;
+
+
+                        char path[1024];
+                        char Id[512];
+                        snprintf(Id, sizeof(Id), "%s/%s", parent1, id);
+                        snprintf(path, sizeof(path), "%s/inc.%d.s", parent2, counter);
+                        emit("\t%%include \"%s/inc.%d.s\"\n", parent2, counter++);
+                        free(parent1);
+                        free(parent2);
+                        is_included = true;
+                        use_eax = 1;
+                        compiler(Id,path);
+                        is_included = false;
+                        clean_vars();
+                        mainPath=oldpath1;
+                        outPath=oldpath2;
+                        fo=f;
+                        sf=fs;
+                        src=oldsrc;
+                        tok = ';';
+                        ++src;
+                        next();
+                        return;
+                }
         }
 
         tok = *src++;

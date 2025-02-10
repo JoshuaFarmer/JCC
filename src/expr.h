@@ -167,7 +167,7 @@ void HandleIdentifier()
         SaveIdAs(nam);
         if (is_function_declaration())
         {
-                clean();
+                clean_vars();
                 PopID();
                 emit("%s:\n",nam);
                 emit("\tpush ebp\n",nam);
