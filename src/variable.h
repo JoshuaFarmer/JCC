@@ -38,7 +38,7 @@ void clean_vars()
 VARIABLE * cvar(TYPE type, char * name, int is_const)
 {
         int size = SIZEOF(type);
-        fprintf(fo,"\tsub esp,%d\n",size);
+        //fprintf(fo,"\tsub esp,%d\n",size);
         VARIABLE * new = malloc(sizeof(VARIABLE));
         if (!new) exit(2);
         new->con=is_const;

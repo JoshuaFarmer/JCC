@@ -208,7 +208,7 @@ void expr()
         {
                 case TOK_NUM:
                 {
-                        emit("\tmov e%cx,%d\n",(use_eax)?'a':'b',num);
+                        emit("\tmov e%cx,%d\n",ActiveReg(),num);
                         push_type(TYPE_INT);
                         use_eax=0;
                         expr();
@@ -221,16 +221,11 @@ void expr()
 
                 case TOK_STR:
                 {
-                        if (!IN_ASM)
-                        {
-                                STRING * x = new_string();
-                                emit("\tmov e%cx,lit_%d\n",(use_eax)?'a':'b',str_count-1);
-                        }
-                        else
-                        {
-                                emit("\t%s\n",id);
-                                return;
-                        }
+                        STRING * x;
+                        (!IN_ASM) ? x = new_string(),
+                                    emit("\tmov e%cx,lit_%d\n",ActiveReg(),str_count-1)
+                                  : emit("\t%s\n",id);
+                        return;
                 } break;
 
                 case TOK_ASM:
@@ -248,30 +243,17 @@ void expr()
                 case TOK_BCD:
                 case TOK_VOID:
                 {
-                        int type = tok;
-                        bool is_ptr = get_var_name();
+                        int type=tok,is_ptr=get_var_name();
                         PopID();
-                        if (is_ptr)
+                        switch (type)
                         {
-                                switch (type)
-                                {
-                                        case TOK_INT: cvar(TYPE_INT_PTR, id, CONSTANT);
-                                        case TOK_SHORT: cvar(TYPE_INT_PTR, id, CONSTANT);
-                                        case TOK_CHAR: cvar(TYPE_CHAR_PTR, id, CONSTANT);
-                                }
+                                case TOK_INT:   cvar((is_ptr) ? TYPE_INT_PTR   : TYPE_INT,   id, CONSTANT); break;
+                                case TOK_SHORT: cvar((is_ptr) ? TYPE_SHORT_PTR : TYPE_SHORT, id, CONSTANT); break;
+                                case TOK_CHAR:  cvar((is_ptr) ? TYPE_CHAR_PTR  : TYPE_CHAR,  id, CONSTANT); break;
+                                case TOK_BCD:   cvar((is_ptr) ? TYPE_BCD_PTR   : TYPE_BCD,   id, CONSTANT); break;
+                                case TOK_VOID:  (is_ptr) ? cvar(TYPE_VOID_PTR, id, CONSTANT) : synerr("can't have void variable"); break;
                         }
-                        else
-                        {
-                                switch (type)
-                                {
-                                        case TOK_INT:   cvar(TYPE_INT, id, CONSTANT); break;
-                                        case TOK_SHORT: cvar(TYPE_SHORT, id, CONSTANT); break;
-                                        case TOK_CHAR:  cvar(TYPE_CHAR, id, CONSTANT); break;
-                                        case TOK_BCD:  cvar(TYPE_BCD, id, CONSTANT); break;
-                                        case TOK_VOID:  synerr("can't have void variable"); break;
-                                }
-                                CONSTANT=false;
-                        }
+                        CONSTANT=false;
                 } break;
 
                 case TOK_EXTERN:
@@ -283,50 +265,42 @@ void expr()
                 
                 case TOK_CHAIN_OR:
                 {
-                        int true_label = m++;
-                        int end = m++;
-                        int type_b = pop_type();
-                        int type_a = pop_type();
-                        typeCheck(type_a, type_b);
+                        get_start_end();
+                        get_args();
 
                         emit("\ttest eax,eax\n");
-                        emit("\tjnz L%d\n", true_label);
+                        emit("\tjnz L%d\n", start);
                         use_eax = 1;
                         expr();
                         emit("\ttest eax,eax\n");
-                        emit("\tjnz L%d\n", true_label);
+                        emit("\tjnz L%d\n", start);
                         emit("\tjmp L%d\n", end);
-                        emit("L%d:\n", true_label);
+                        emit("L%d:\n", start);
                         emit("\tmov eax,1\n");
                         emit("L%d:\n", end);
                 } break;
 
                 case TOK_CHAIN:
                 {
-                        int false_label = m++;
-                        int end = m++;
-                        int type_b = pop_type();
-                        int type_a = pop_type();
-                        typeCheck(type_a,type_b);
+                        get_start_end();
+                        get_args();
 
                         emit("\ttest eax,eax\n");
-                        emit("\tjz L%d\n", false_label);
+                        emit("\tjz L%d\n", start);
                         use_eax = 1;
                         expr();
                         emit("\ttest eax,eax\n");
-                        emit("\tjz L%d\n", false_label);
+                        emit("\tjz L%d\n", start);
                         emit("\tmov eax,1\n");
                         emit("\tjmp L%d\n", end);
-                        emit("L%d:\n", false_label);
+                        emit("L%d:\n", start);
                         emit("\tmov eax,0\n");
                         emit("L%d:\n", end);
                 } break;
 
                 case TOK_LEQ:
                 {
-                        int type_b = pop_type();
-                        int type_a = pop_type();
-                        typeCheck(type_a,type_b);
+                        get_args();
                         expr();
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
@@ -336,6 +310,7 @@ void expr()
 
                 case TOK_GEQ:
                 {
+                        get_args();
                         expr();
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
@@ -345,9 +320,7 @@ void expr()
 
                 case '<':
                 {
-                        int type_b = pop_type();
-                        int type_a = pop_type();
-                        typeCheck(type_a,type_b);
+                        get_args();
                         expr();
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
@@ -357,6 +330,7 @@ void expr()
 
                 case '>':
                 {
+                        get_args();
                         expr();
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
@@ -366,6 +340,7 @@ void expr()
 
                 case TOK_EQ:
                 {
+                        get_args();
                         expr();
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
@@ -375,6 +350,7 @@ void expr()
 
                 case TOK_NEQ:
                 {
+                        get_args();
                         expr();
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
@@ -384,28 +360,26 @@ void expr()
 
                 case TOK_WHILE:
                 {
-                        int label = m++;
-                        int end = m++;
-                        emit(".M%d:\n",label);
+                        get_start_end();
+                        emit(".M%d:\n",start);
                         expr();
                         emit("\ttest eax,eax\n");
                         emit("\tjz .M%d\n",end);
                         body();
-                        emit("\tjmp .M%d\n",label);
+                        emit("\tjmp .M%d\n",start);
                         emit(".M%d:\n",end);
                         return;
                 } break;
 
-                case TOK_BREAK:
-                {
-                        emit("\tjmp .M%d\n",m-2);
-                } break;
+                //case TOK_BREAK:
+                //{
+                //        emit("\tjmp .M%d\n",m-2);
+                //} break;
 
                 case TOK_IF:
                 {
-                        int label = m++;
-                        int end = m++;
-                        emit(".M%d:\n",label);
+                        get_start_end();
+                        emit(".M%d:\n",start);
                         expr();
                         emit("\ttest eax,eax\n");
                         emit("\tjz .M%d\n",end);
@@ -419,11 +393,7 @@ void expr()
                 } break;
 
                 case ',':
-                {
                         emit("\tpush eax\n");
-                        use_eax = 1;
-                        return;
-                } break;
                 case ';':
                 {
                         use_eax = 1;
@@ -435,42 +405,29 @@ void expr()
                         if (is_start())
                         {
                                 bool is_ptr = get_var_name();
-                                if (is_ptr)
-                                {
-                                        synerr("syntax error, what did you even do? &*VARIABLE what the fuck");
-                                }
-
-                                PopID();
                                 VARIABLE * var = gvar(id);
-                                if (!var)
-                                {
-                                        synerr("VARIABLE '%s' not found", id);
-                                }
+                                if (is_ptr)
+                                        synerr("syntax error, what did you even do? &*VARIABLE what the fuck");
                                 emit("\tlea eax,[ebp-%d] \n",var->bpoff);
+                                PopID();
+                                return;
                         }
-                        else
-                        {
-                                expr();
-                                emit("\tand eax,ebx\n");
-                        }
+
+                        expr();
+                        emit("\tand eax,ebx\n");
                 } break;
 
                 case '*':
                 {
-                        if (is_start())
-                        {
-                                expr();
-                                emit("\tmov eax,[eax]\n");
-                        }
-                        else
-                        {
-                                expr();
-                                emit("\timul eax,ebx\n");
-                        }
+                        get_args();
+                        expr();
+                        (is_start()) ? emit("\tmov eax,[eax]\n")
+                                     : emit("\timul eax,ebx\n");
                 } break;
 
                 case '/':
                 {
+                        get_args();
                         expr();
                         emit("\tcdq\n");
                         emit("\tidiv ebx\n");
@@ -478,6 +435,7 @@ void expr()
 
                 case '%':
                 {
+                        get_args();
                         expr();
                         emit("\tcdq\n");
                         emit("\tidiv ebx\n");
@@ -486,12 +444,14 @@ void expr()
 
                 case '|':
                 {
+                        get_args();
                         expr();
                         emit("\tor eax,ebx\n");
                 } break;
 
                 case '^':
                 {
+                        get_args();
                         expr();
                         emit("\txor eax,ebx\n");
                 } break;
@@ -523,12 +483,14 @@ void expr()
 
                 case '+':
                 {
+                        get_args();
                         expr();
                         emit("\tadd eax,ebx\n");
                 } break;
 
                 case '-':
                 {
+                        get_args();
                         expr();
                         emit("\tsub eax,ebx\n");
                 } break;

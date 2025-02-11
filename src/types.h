@@ -10,6 +10,9 @@
 #include <stdarg.h>
 #include <libgen.h>
 #define is_start() (use_eax)
+#define get_args() int type_b = pop_type(); int type_a = pop_type(); typeCheck(type_a,type_b);
+#define get_start_end() int start = m++, end = m++;
+#define ActiveReg() ((use_eax)?'a':'b')
 
 const int SIZEOFS[] = {4,2,1,4,4,2,1,4};
 const char * TYPENAMES[] = {
@@ -35,6 +38,7 @@ typedef enum TYPE
         TYPE_SHORT_PTR,
         TYPE_CHAR_PTR,
         TYPE_BCD_PTR,
+        TYPE_VOID_PTR,
 } TYPE;
 
 enum TOK_KEYWORD
