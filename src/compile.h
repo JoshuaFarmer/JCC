@@ -44,7 +44,7 @@ void compiler(char * srcp, char * outp)
         #endif
 #elif defined(ARCH_I8085)
         emit("_start:\n");
-        emit("\tlxi h,0xff\n");
+        emit("\tlxi h,0xff00\n");
         emit("\tsphl\n");
         emit("\tcall main\n");
         emit("inf:\n");
