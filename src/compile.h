@@ -43,11 +43,13 @@ void compiler(char * srcp, char * outp)
                 emit("\tint 0x80\n");
         #endif
 #elif defined(ARCH_I8085)
-        emit("_start:\n");
+        /* https://www.sim8085.com/ */
+        emit("start:\n");
         emit("\tlxi h,0xff00\n");
         emit("\tsphl\n");
         emit("\tcall main\n");
         emit("inf:\n");
+        emit("\thlt\n");
         emit("\tjmp inf\n");
         bpoff = 0xFFFF;
 #endif
