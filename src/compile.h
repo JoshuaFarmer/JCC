@@ -42,6 +42,16 @@ void compiler(char * srcp, char * outp)
                 emit("\tmov eax,1\n");
                 emit("\tint 0x80\n");
         #endif
+#elif defined(ARCH_I8086)
+        emit("\tglobal _start\n");
+        emit("\tsection .text\n");
+        emit("_start:\n");
+        emit("\tcall main\n");
+        #if defined(OS_DOS)
+                emit("\tmov ax,0x4c00\n");
+                emit("\tint 0x21\n");
+        #endif
+        emit("\tjmp $\n");
 #elif defined(ARCH_I8085)
         /* https://www.sim8085.com/ */
         emit("start:\n");

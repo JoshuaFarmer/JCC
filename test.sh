@@ -5,6 +5,7 @@ for file in tests/src/*.c; do
         continue
     fi
     ./bin/jcc-i386 "$file" -o "tests/s/${base}_j.s"
+    ./bin/jcc-i8086 "$file" -o "tests/s/${base}_8086.s"
     nasm "tests/s/${base}_j.s" -o "tests/o/${base}_j.o" -felf32
     ld -m elf_i386 -s -o "tests/exe/${base}_j" "tests/o/${base}_j.o"
     "./tests/exe/${base}_j"
@@ -20,10 +21,3 @@ for file in tests/src/*.c; do
     "./tests/exe/${base}_c"
     echo "$file (CDECL) RETURN CODE: $?"
 done
-
-# I8085 Compilation
-for file in tests/src/8085/*.c; do
-    base=$(basename "$file" .c)
-    ./bin/jcc-i85 "$file" -o "tests/s/${base}_8085.s"
-done
-

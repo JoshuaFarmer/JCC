@@ -41,6 +41,10 @@ void clean_vars()
 
 VARIABLE * cvar(TYPE type, char * name, int is_const)
 {
+#if defined(ARCH_I8086)
+        if (bpoff > 0)
+                emit("\tsub sp,2\n");
+#endif
         int size = SIZEOF(type);
         //fprintf(fo,"\tsub esp,%d\n",size);
         VARIABLE * new = malloc(sizeof(VARIABLE));
@@ -53,7 +57,7 @@ VARIABLE * cvar(TYPE type, char * name, int is_const)
         new->used=0;
         new->type=type;
         list.next=new;
-#if defined(ARCH_I386)
+#if defined(ARCH_I386) || defined(ARCH_I8086)
         bpoff += size;
 #elif defined(ARCH_I8085)
         bpoff -= size;
@@ -113,6 +117,10 @@ void mov_exx_variable(VARIABLE * var)
                 case 4:emit("\tmov e%cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
                 case 2:emit("\tmov %cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
                 case 1:emit("\tmov %cl,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
+#elif defined(ARCH_I8086)
+                case 4:
+                case 2:emit("\tmov %cx,[bp%c%d]\n",(use_eax)?'a':'b',(var->bpoff > 0) ? '-' : '+',abs(var->bpoff)); break;
+                case 1:emit("\tmov %cl,[bp%c%d]\n",(use_eax)?'a':'b',(var->bpoff > 0) ? '-' : '+',abs(var->bpoff)); break;
 #elif defined(ARCH_I8085)
                 case 4:
                 case 2:
@@ -146,6 +154,10 @@ void mov_variable_exx(VARIABLE * var)
                 case 4:emit("\tmov [ebp-%d],eax\n",var->bpoff); break;
                 case 2:emit("\tmov [ebp-%d],ax\n",var->bpoff); break;
                 case 1:emit("\tmov [ebp-%d],al\n",var->bpoff); break;
+#elif defined(ARCH_I8086)
+                case 4:
+                case 2:emit("\tmov [bp%c%d],ax\n",(var->bpoff > 0) ? '-' : '+',abs(var->bpoff)); break;
+                case 1:emit("\tmov [bp%c%d],al\n",(var->bpoff > 0) ? '-' : '+',abs(var->bpoff)); break;
 #elif defined(ARCH_I8085)
                 case 4:
                 case 2:

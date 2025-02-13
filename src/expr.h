@@ -94,6 +94,46 @@ void declare_function_args()
         }
 }
 
+#elif defined(ARCH_I8086)
+void declare_function_args()
+{
+        int c=0;
+        int start = 4;
+        char * tmp = src;
+        int tokt = tok;
+        char tid[sizeof(id)];
+        strcpy(tid,id);
+
+        while (*src && tok && tok != ')')
+        {
+                if (tok == TOK_IDE)
+                {
+                        start += 2;
+                }
+                next();
+        }
+
+        src = tmp;
+        tok = tokt;
+        strcpy(id,tid);
+        bpoff = -start;
+        while (*src && tok && tok != ')')
+        {
+                if (tok == TOK_IDE)
+                {
+                        VARIABLE * x = cvar(TYPE_INT, id, c);
+                        x->used=1;
+                        c = 0;
+                }
+                else if (tok == TOK_CONST)
+                {
+                        c = 1;
+                }
+                next();
+        }
+        bpoff = 2;
+}
+
 #elif defined(CALL_CDECL) && defined(ARCH_I386)
 void declare_function_args()
 {
@@ -151,6 +191,8 @@ int call_function_args()
         }
 #if defined(ARCH_I386)
         emit("\tpush eax\n");
+#elif defined(ARCH_I8086)
+        emit("\tpush ax\n");
 #endif
         emitting = true;
         return c;
@@ -197,6 +239,10 @@ void HandleIdentifier()
                 clean_vars();
                 emit("\tpush ebp\n");
                 emit("\tmov ebp,esp\n");
+#elif defined(ARCH_I8086)
+                clean_vars();
+                emit("\tpush bp\n");
+                emit("\tmov bp,sp\n");
 #elif defined(ARCH_I8085)
                 emit("\t; function start\n");
 #endif
@@ -208,6 +254,11 @@ void HandleIdentifier()
                 emit("%s_exit:\n",current_function);
                 emit("\tmov esp,ebp\n");
                 emit("\tpop ebp\n");
+                emit("\tret\n");
+#elif defined(ARCH_I8086)
+                emit("%s_exit:\n",current_function);
+                emit("\tmov sp,bp\n");
+                emit("\tpop bp\n");
                 emit("\tret\n");
 #elif defined(ARCH_I8085)
                 emit("%s_exit:\n",current_function);
@@ -221,6 +272,9 @@ void HandleIdentifier()
 #if defined(ARCH_I386)
                 emit("\tcall %s\n",nam);
                 emit("\tadd esp,%d\n",4*argc);
+#elif defined(ARCH_I8086)
+                emit("\tcall %s\n",nam);
+                emit("\tadd sp,%d\n",2*argc);
 #elif defined(ARCH_I8085)
                 emit("\tcall %s\n",nam);
 #endif
@@ -247,6 +301,8 @@ void expr()
                 {
 #if defined(ARCH_I386)
                         emit("\tmov e%cx,%d\n",ActiveReg(),num);
+#elif defined(ARCH_I8086)
+                        emit("\tmov %cx,%d\n",ActiveReg(),num);
 #elif defined(ARCH_I8085)
                         emit("\tmvi %c,%d\n",ActiveReg(),num);
 #endif
@@ -266,6 +322,8 @@ void expr()
                         (!IN_ASM) ? x = new_string(),
 #if defined(ARCH_I386)
                                     emit("\tmov e%cx,lit_%d\n",ActiveReg(),str_count-1)
+#elif defined(ARCH_I8086)
+                                    emit("\tmov %cx,lit_%d\n",ActiveReg(),str_count-1)
 #elif defined(ARCH_I8085)
                                     emit("\tlxi %c,lit_%d\n",ActiveReg(),str_count-1)
 #endif
@@ -306,7 +364,7 @@ void expr()
                         next();
 #if defined(ARCH_I386)
                         emit("\textern %s\n",id);
-#elif defined(ARCH_I8085)
+#else
                         synerr("Can't use extern for this architecture");
 #endif
                         skip_til(')');
@@ -328,6 +386,17 @@ void expr()
                         emit("L%d:\n", start);
                         emit("\tmov eax,1\n");
                         emit("L%d:\n", end);
+#elif defined(ARCH_I8086)
+                        emit("\ttest ax,ax\n");
+                        emit("\tjnz L%d\n", start);
+                        use_eax = 1;
+                        expr();
+                        emit("\ttest ax,ax\n");
+                        emit("\tjnz L%d\n", start);
+                        emit("\tjmp L%d\n", end);
+                        emit("L%d:\n", start);
+                        emit("\tmov ax,1\n");
+                        emit("L%d:\n", end);
 #elif defined(ARCH_I8085)
 #endif
                 } break;
@@ -348,6 +417,18 @@ void expr()
                         emit("L%d:\n", start);
                         emit("\tmov eax,0\n");
                         emit("L%d:\n", end);
+#elif defined(ARCH_I8086)
+                        emit("\ttest ax,ax\n");
+                        emit("\tjz L%d\n", start);
+                        use_eax = 1;
+                        expr();
+                        emit("\ttest ax,ax\n");
+                        emit("\tjz L%d\n", start);
+                        emit("\tmov ax,1\n");
+                        emit("\tjmp L%d\n", end);
+                        emit("L%d:\n", start);
+                        emit("\tmov ax,0\n");
+                        emit("L%d:\n", end);
 #elif defined(ARCH_I8085)
 #endif
                 } break;
@@ -361,7 +442,17 @@ void expr()
                         emit("\tcmp eax,0\n");
                         emit("\tsetle al\n");
                         emit("\tmovzx eax,al\n");
-#elif defined(ARCH_I8085)
+#elif defined(ARCH_I8086)
+                        get_start_end();
+                        emit("\tsub ax,bx\n");
+                        emit("\tjle %s_M%d\n",current_function,start);
+                        emit("\tmov ax,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmov ax,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
+#else
+                        synerr("LEQ Is not supported by this architecture");
 #endif
                 } break;
 
@@ -374,7 +465,17 @@ void expr()
                         emit("\tcmp eax,0\n");
                         emit("\tsetge al\n");
                         emit("\tmovzx eax,al\n");
-#elif defined(ARCH_I8085)
+#elif defined(ARCH_I8086)
+                        get_start_end();
+                        emit("\tsub ax,bx\n");
+                        emit("\tjge %s_M%d\n",current_function,start);
+                        emit("\tmov ax,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmov ax,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
+#else
+                        synerr("GEQ Is not supported by this architecture");
 #endif
                 } break;
 
@@ -387,7 +488,17 @@ void expr()
                         emit("\tcmp eax,0\n");
                         emit("\tsetl al\n");
                         emit("\tmovzx eax,al\n");
-#elif defined(ARCH_I8085)
+#elif defined(ARCH_I8086)
+                        get_start_end();
+                        emit("\tsub ax,bx\n");
+                        emit("\tjl %s_M%d\n",current_function,start);
+                        emit("\tmov ax,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmov ax,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
+#else
+                        synerr("LE Is not supported by this architecture");
 #endif
                 } break;
 
@@ -400,7 +511,17 @@ void expr()
                         emit("\tcmp eax,0\n");
                         emit("\tsetg al\n");
                         emit("\tmovzx eax,al\n");
-#elif defined(ARCH_I8085)
+#elif defined(ARCH_I8086)
+                        get_start_end();
+                        emit("\tsub ax,bx\n");
+                        emit("\tjg %s_M%d\n",current_function,start);
+                        emit("\tmov ax,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmov ax,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
+#else
+                        synerr("GE Is not supported by this architecture");
 #endif
                 } break;
 
@@ -422,6 +543,17 @@ void expr()
                         emit("\t%s_M%d:\n",current_function,start);
                         emit("\tmvi a,1\n");
                         emit("\t%s_M%d:\n",current_function,end);
+#elif defined(ARCH_I8086)
+                        get_start_end();
+                        emit("\tsub ax,bx\n");
+                        emit("\tje %s_M%d\n",current_function,start);
+                        emit("\tmov ax,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmov ax,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
+#else
+                        synerr("EQ Is not supported by this architecture");
 #endif
                 } break;
 
@@ -443,6 +575,17 @@ void expr()
                         emit("\t%s_M%d:\n",current_function,start);
                         emit("\tmvi a,0\n");
                         emit("\t%s_M%d:\n",current_function,end);
+#elif defined(ARCH_I8086)
+                        get_start_end();
+                        emit("\tsub ax,bx\n");
+                        emit("\tjne %s_M%d\n",current_function,start);
+                        emit("\tmov ax,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmov ax,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
+#else
+                        synerr("NEQ Is not supported by this architecture");
 #endif
                 } break;
 
@@ -458,6 +601,11 @@ void expr()
                         emit("\tmov b,a\n");
                         emit("\tana b\n");
                         emit("\tjz %s_M%d\n",current_function,end);
+#elif defined(ARCH_I8086)
+                        emit("\ttest ax,ax\n");
+                        emit("\tjz %s_M%d\n",current_function,end);
+#else
+                        synerr("WHILE Is not supported by this architecture");
 #endif
                         body();
                         emit("\tjmp %s_M%d\n",current_function,start);
@@ -477,6 +625,11 @@ void expr()
                         emit("\tmov b,a\n");
                         emit("\tana b\n");
                         emit("\tjz %s_M%d\n",current_function,end);
+#elif defined(ARCH_I8086)
+                        emit("\ttest ax,ax\n");
+                        emit("\tjz %s_M%d\n",current_function,end);
+#else
+                        synerr("IF Is not supported by this architecture");
 #endif
                         body();
                         emit("%s_M%d:\n",current_function,end);
@@ -490,6 +643,8 @@ void expr()
                 case ',':
 #if defined(ARCH_I386)
                         emit("\tpush eax\n");
+#elif defined(ARCH_I8086)
+                        emit("\tpush ax\n");
 #endif
                 case ';':
                 {
@@ -506,9 +661,13 @@ void expr()
                                 if (is_ptr)
                                         synerr("syntax error, what did you even do? &*VARIABLE what the fuck");
 #if defined(ARCH_I386)
-                                emit("\tlea eax,[ebp-%d]\n",var->bpoff);
+                                emit("\tlea e%cx,[ebp-%d]\n",ActiveReg(),var->bpoff);
+#elif defined(ARCH_I8086)
+                                emit("\tlea %cx,[ebp-%d]\n",ActiveReg(),var->bpoff);
 #elif defined(ARCH_I386)
                                 emit("\tmvi a,\n",(var->bpoff)-(0xFFFF - 0xFF));
+#else
+                        synerr("ADDR OF Is not supported by this architecture");
 #endif
                                 PopID();
                                 return;
@@ -516,6 +675,8 @@ void expr()
 
                         expr();
 #if defined(ARCH_I386)
+                        emit("\tand eax,ebx\n");
+#elif defined(ARCH_I8086)
                         emit("\tand eax,ebx\n");
 #elif defined(ARCH_I386)
                         emit("\tana b\n");
@@ -529,7 +690,10 @@ void expr()
 #if defined(ARCH_I386)
                         (is_start()) ? emit("\tmov eax,[eax]\n")
                                      : emit("\timul eax,ebx\n");
-#else
+#elif defined(ARCH_I8086)
+                        (is_start()) ? emit("\tmov ax,[ax]\n")
+                                     : emit("\timul ax,bx\n");
+#elif defined(ARCH_I8086)
                         (is_start()) ? emit("\tmvi h,255\n"),
                                        emit("\tmov l,a\n"),
                                        emit("\tmov a,m\n")
@@ -545,6 +709,8 @@ void expr()
 
                         emit("\tcdq\n");
                         emit("\tidiv ebx\n");
+#elif defined(ARCH_I8086)
+                        emit("\tidiv bx\n");
 #else
                         synerr("Architecture does not support division.");
 #endif
@@ -558,6 +724,9 @@ void expr()
                         emit("\tcdq\n");
                         emit("\tidiv ebx\n");
                         emit("\tmov eax,edx\n");
+#elif defined(ARCH_I8086)
+                        emit("\tidiv bx\n");
+                        emit("\tmov ax,dx\n");
 #else
                         synerr("Architecture does not support division (modulo).");
 #endif
@@ -569,6 +738,8 @@ void expr()
                         expr();
 #if defined(ARCH_I386)
                         emit("\tor eax,ebx\n");
+#elif defined(ARCH_I8086)
+                        emit("\tor ax,bx\n");
 #elif defined(ARCH_I8085)
                         emit("\tora b\n");
 #endif
@@ -580,6 +751,8 @@ void expr()
                         expr();
 #if defined(ARCH_I386)
                         emit("\txor eax,ebx\n");
+#elif defined(ARCH_I8086)
+                        emit("\txor ax,bx\n");
 #elif defined(ARCH_I8085)
                         emit("\txra b\n");
 #endif
@@ -590,6 +763,8 @@ void expr()
                         expr();
 #if defined(ARCH_I386)
                         emit("\tnot eax\n");
+#elif defined(ARCH_I8086)
+                        emit("\tnot ax\n");
 #elif defined(ARCH_I8085)
                         emit("\tcma\n");
 #endif
@@ -601,6 +776,9 @@ void expr()
 #if defined(ARCH_I386)
                         emit("\txor eax,1\n");
                         emit("\tand eax,1\n");
+#elif defined(ARCH_I8086)
+                        emit("\txor ax,1\n");
+                        emit("\tand ax,1\n");
 #elif defined(ARCH_I8085)
                         emit("\txri 1\n");
                         emit("\tani 1\n");
@@ -610,7 +788,7 @@ void expr()
                 case TOK_RETURN:
                 {
                         expr();
-#if defined(ARCH_I386) || defined(ARCH_I8085)
+#if defined(ARCH_I386) || defined(ARCH_I8085) || defined(ARCH_I8086)
                         emit("\tjmp %s_exit\n",current_function);
 #endif
                         return;
@@ -627,6 +805,8 @@ void expr()
                         expr();
 #if defined(ARCH_I386)
                         emit("\tadd eax,ebx\n");
+#elif defined(ARCH_I8086)
+                        emit("\tadd ax,bx\n");
 #elif defined(ARCH_I8085)
                         emit("\tadd b\n");
 #endif
@@ -638,6 +818,8 @@ void expr()
                         expr();
 #if defined(ARCH_I386)
                         emit("\tsub eax,ebx\n");
+#elif defined(ARCH_I8086)
+                        emit("\tsub ax,bx\n");
 #elif defined(ARCH_I8085)
                         emit("\tsub b\n");
 #endif
