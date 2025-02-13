@@ -85,7 +85,7 @@ void next()
         else if (isalpha(*src))
         {
                 int i = 0;
-                while (isalnum(*src) && i < 31) {
+                while ((isalnum(*src) || *src == '_') && i < 31) {
                         id[i++] = *src++;
                 } id[i] = '\0';
                 for (int j = 0; j < sizeof(keys)/sizeof(struct KEYWORD); ++j)

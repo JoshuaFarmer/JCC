@@ -43,8 +43,12 @@ void compiler(char * srcp, char * outp)
                 emit("\tint 0x80\n");
         #endif
 #elif defined(ARCH_I8086)
+        emit("\tbits 16\n");
         emit("\tglobal _start\n");
         emit("\tsection .text\n");
+        #if defined(OS_DOS)
+                emit("\torg 0x100\n");
+        #endif
         emit("_start:\n");
         emit("\tcall main\n");
         #if defined(OS_DOS)
