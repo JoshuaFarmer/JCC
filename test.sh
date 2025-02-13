@@ -22,7 +22,7 @@ for file in tests/src/*.c; do
 done
 
 # I8085 Compilation
-for file in tests/src/*.c; do
+for file in tests/src/8085/*.c; do
     base=$(basename "$file" .c)
     ./bin/jcc-i85 "$file" -o "tests/s/${base}_8085.s"
 done

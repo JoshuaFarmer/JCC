@@ -31,10 +31,10 @@ void compiler(char * srcp, char * outp)
 
         if (!is_included)
         {
-#if !defined(ARCH_I8085)
+#if defined(ARCH_I386)
         emit("\tsection .text\n");
         emit("\tglobal main\n");
-        #if defined(CALL_JDECL) && defined(ARCH_I386)
+        #if defined(CALL_JDECL)
                 emit("\tglobal _start\n");
                 emit("_start:\n");
                 emit("\tcall main\n");
@@ -49,6 +49,7 @@ void compiler(char * srcp, char * outp)
         emit("\tcall main\n");
         emit("inf:\n");
         emit("\tjmp inf\n");
+        bpoff = 0xFFFF;
 #endif
         }
         while (*src)

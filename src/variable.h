@@ -32,7 +32,11 @@ void clean_vars()
                 prev = NULL;
         }
         list.next=NULL;
+#if defined(ARCH_I386)
         bpoff = 4;
+#elif defined(ARCH_I8085)
+        bpoff = 0xFFFF;
+#endif
 }
 
 VARIABLE * cvar(TYPE type, char * name, int is_const)
@@ -49,7 +53,11 @@ VARIABLE * cvar(TYPE type, char * name, int is_const)
         new->used=0;
         new->type=type;
         list.next=new;
+#if defined(ARCH_I386)
         bpoff += size;
+#elif defined(ARCH_I8085)
+        bpoff -= size;
+#endif
         return new;
 }
 
@@ -108,11 +116,17 @@ void mov_exx_variable(VARIABLE * var)
 #elif defined(ARCH_I8085)
                 case 4:
                 case 2:
-                case 1:emit("\tlxi d,%d ; %d\n",(unsigned char)(char)(-var->bpoff),(char)(-var->bpoff));
-                       emit("\tdad d\n");
-                       emit("\tmov %c,m\n",(use_eax)?'a':'b');
-                       emit("\tlxi d,%d\n",(var->bpoff));
-                       emit("\tdad d\n");
+                case 1:
+                {
+                        if (use_eax)
+                                emit("\tlda %d ; %s\n",var->bpoff,var->name);
+                        else
+                        {
+                                emit("\tlxi h,%d ; %s\n",var->bpoff,var->name);
+                                emit("\tmov b,m\n");
+                        }
+                }
+                break;
 #endif
         }
         use_eax=0;
@@ -135,11 +149,8 @@ void mov_variable_exx(VARIABLE * var)
 #elif defined(ARCH_I8085)
                 case 4:
                 case 2:
-                case 1:emit("\tlxi d,%d; %d\n",(unsigned char)(char)(-var->bpoff),(char)(-var->bpoff));
-                       emit("\tdad d\n");
-                       emit("\tmov m,%c\n",(use_eax)?'a':'b');
-                       emit("\tlxi d,%d\n",(var->bpoff));
-                       emit("\tdad d\n");
+                case 1:emit("\tsta %d ; %s\n",var->bpoff,var->name);
+                break;
 #endif
         }
         var->used = true;

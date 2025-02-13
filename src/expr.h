@@ -121,32 +121,11 @@ void declare_function_args()
 void declare_function_args()
 {
         int c=0;
-        int start = 2;
-        char * tmp = src;
-        int tokt = tok;
-        char tid[sizeof(id)];
-        strcpy(tid,id);
-
-        while (*src && tok && tok != ')')
-        {
-                if (tok == TOK_IDE)
-                {
-                        start += 2;
-                }
-                next();
-        }
-
-        src = tmp;
-        tok = tokt;
-        strcpy(id,tid);
-        bpoff = start;
-
         while (*src && tok && tok != ')')
         {
                 if (tok == TOK_IDE)
                 {
                         VARIABLE * x = cvar(TYPE_INT, id, c);
-                        x->used=1;
                         c = 0;
                 }
                 else if (tok == TOK_CONST)
@@ -155,14 +134,15 @@ void declare_function_args()
                 }
                 next();
         }
-
-        bpoff=-2;
 }
 #endif
 
 int call_function_args()
 {
         int c=0;
+#if defined(ARCH_I8085)
+        emitting = false;
+#endif
         while (*src && tok && tok != ')')
         {
                 use_eax=1;
@@ -171,9 +151,8 @@ int call_function_args()
         }
 #if defined(ARCH_I386)
         emit("\tpush eax\n");
-#elif defined(ARCH_I8085)
-        emit("\tpush psw\n");
 #endif
+        emitting = true;
         return c;
 }
 
@@ -212,16 +191,14 @@ void HandleIdentifier()
         if (is_function_declaration())
         {
                 strcpy(current_function,nam);
-                clean_vars();
                 PopID();
                 emit("%s:\n",nam);
 #if defined(ARCH_I386)
+                clean_vars();
                 emit("\tpush ebp\n");
                 emit("\tmov ebp,esp\n");
 #elif defined(ARCH_I8085)
-                emit("\tpush h\n");
-                emit("\tlxi h,0\n");
-                emit("\tdad sp\n");
+                emit("\t; function start\n");
 #endif
                 next();
                 next();
@@ -234,8 +211,6 @@ void HandleIdentifier()
                 emit("\tret\n");
 #elif defined(ARCH_I8085)
                 emit("%s_exit:\n",current_function);
-                emit("\tsphl\n");
-                emit("\tpop h\n");
                 emit("\tret\n");
 #endif
         }
@@ -248,11 +223,6 @@ void HandleIdentifier()
                 emit("\tadd esp,%d\n",4*argc);
 #elif defined(ARCH_I8085)
                 emit("\tcall %s\n",nam);
-                emit("\tshld 0xfff0\n");
-                emit("\tlxi h,%d\n",4*argc);
-                emit("\tdad sp\n");
-                emit("\tsphl\n");
-                emit("\tlhld 0xfff0\n");
 #endif
         }
         else if (!is_assignment())
@@ -520,8 +490,6 @@ void expr()
                 case ',':
 #if defined(ARCH_I386)
                         emit("\tpush eax\n");
-#elif defined(ARCH_I8085)
-                        emit("\tpush psw\n");
 #endif
                 case ';':
                 {
@@ -540,8 +508,7 @@ void expr()
 #if defined(ARCH_I386)
                                 emit("\tlea eax,[ebp-%d]\n",var->bpoff);
 #elif defined(ARCH_I386)
-                                emit("\tmov a,l\n"); /* we will put SP at 0xFF on startup */
-                                emit("\tsub a,\n",var->bpoff);
+                                emit("\tmvi a,\n",(var->bpoff)-(0xFFFF - 0xFF));
 #endif
                                 PopID();
                                 return;
@@ -563,11 +530,9 @@ void expr()
                         (is_start()) ? emit("\tmov eax,[eax]\n")
                                      : emit("\timul eax,ebx\n");
 #else
-                        (is_start()) ? emit("\tpush h\n"),
-                                       emit("\tlxi h,0\n"),
+                        (is_start()) ? emit("\tmvi h,255\n"),
                                        emit("\tmov l,a\n"),
-                                       emit("\tmov a,m\n"),
-                                       emit("\tpop h\n")
+                                       emit("\tmov a,m\n")
                                      : synerr("Architecture does not support multiplication.");
 #endif
                 } break;

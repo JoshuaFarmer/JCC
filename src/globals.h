@@ -17,6 +17,7 @@ int      str_count=0;
 STRING   strings = {.next=NULL,.text=""};
 STACK    stck;
 char     current_function[sizeof(id)];
+bool     emitting = true;
 
 bool ConstIsAssignable(VARIABLE * var)
 {
@@ -25,10 +26,13 @@ bool ConstIsAssignable(VARIABLE * var)
 
 void emit(const char *format, ...)
 {
-        va_list args;
-        va_start(args, format);
-        vfprintf(fo, format, args);
-        va_end(args);
+        if (emitting)
+        {
+                va_list args;
+                va_start(args, format);
+                vfprintf(fo, format, args);
+                va_end(args);
+        }
 }
 
 int flen(FILE * fp)
