@@ -52,7 +52,7 @@ bool is_function_declaration()
         return (tok == '{');
 }
 
-#ifdef ARCH_I386_JDECL
+#if defined(CALL_JDECL) && defined(ARCH_I386)
 void declare_function_args()
 {
         int c=0;
@@ -93,9 +93,8 @@ void declare_function_args()
                 next();
         }
 }
-#endif
 
-#ifdef ARCH_I386_CDECL
+#elif defined(CALL_CDECL) && defined(ARCH_I386)
 void declare_function_args()
 {
         int c=0;
@@ -118,6 +117,47 @@ void declare_function_args()
                 next();
         }
 }
+#elif defined(ARCH_I8085)
+void declare_function_args()
+{
+        int c=0;
+        int start = 2;
+        char * tmp = src;
+        int tokt = tok;
+        char tid[sizeof(id)];
+        strcpy(tid,id);
+
+        while (*src && tok && tok != ')')
+        {
+                if (tok == TOK_IDE)
+                {
+                        start += 2;
+                }
+                next();
+        }
+
+        src = tmp;
+        tok = tokt;
+        strcpy(id,tid);
+        bpoff = start;
+
+        while (*src && tok && tok != ')')
+        {
+                if (tok == TOK_IDE)
+                {
+                        VARIABLE * x = cvar(TYPE_INT, id, c);
+                        x->used=1;
+                        c = 0;
+                }
+                else if (tok == TOK_CONST)
+                {
+                        c = 1;
+                }
+                next();
+        }
+
+        bpoff=-2;
+}
 #endif
 
 int call_function_args()
@@ -129,7 +169,11 @@ int call_function_args()
                 expr();
                 ++c;
         }
+#if defined(ARCH_I386)
         emit("\tpush eax\n");
+#elif defined(ARCH_I8085)
+        emit("\tpush psw\n");
+#endif
         return c;
 }
 
@@ -167,26 +211,49 @@ void HandleIdentifier()
         SaveIdAs(nam);
         if (is_function_declaration())
         {
+                strcpy(current_function,nam);
                 clean_vars();
                 PopID();
                 emit("%s:\n",nam);
-                emit("\tpush ebp\n",nam);
-                emit("\tmov ebp,esp\n",nam);
+#if defined(ARCH_I386)
+                emit("\tpush ebp\n");
+                emit("\tmov ebp,esp\n");
+#elif defined(ARCH_I8085)
+                emit("\tpush h\n");
+                emit("\tlxi h,0\n");
+                emit("\tdad sp\n");
+#endif
                 next();
                 next();
                 declare_function_args();
                 body();
-                emit(".exit:\n",nam);
+#if defined(ARCH_I386)
+                emit("%s_exit:\n",current_function);
                 emit("\tmov esp,ebp\n");
                 emit("\tpop ebp\n");
                 emit("\tret\n");
+#elif defined(ARCH_I8085)
+                emit("%s_exit:\n",current_function);
+                emit("\tsphl\n");
+                emit("\tpop h\n");
+                emit("\tret\n");
+#endif
         }
         else if (is_function())
         {
                 PopID();
                 int argc = call_function_args();
+#if defined(ARCH_I386)
                 emit("\tcall %s\n",nam);
                 emit("\tadd esp,%d\n",4*argc);
+#elif defined(ARCH_I8085)
+                emit("\tcall %s\n",nam);
+                emit("\tshld 0xfff0\n");
+                emit("\tlxi h,%d\n",4*argc);
+                emit("\tdad sp\n");
+                emit("\tsphl\n");
+                emit("\tlhld 0xfff0\n");
+#endif
         }
         else if (!is_assignment())
         {
@@ -208,7 +275,11 @@ void expr()
         {
                 case TOK_NUM:
                 {
+#if defined(ARCH_I386)
                         emit("\tmov e%cx,%d\n",ActiveReg(),num);
+#elif defined(ARCH_I8085)
+                        emit("\tmvi %c,%d\n",ActiveReg(),num);
+#endif
                         push_type(TYPE_INT);
                         use_eax=0;
                         expr();
@@ -223,7 +294,11 @@ void expr()
                 {
                         STRING * x;
                         (!IN_ASM) ? x = new_string(),
+#if defined(ARCH_I386)
                                     emit("\tmov e%cx,lit_%d\n",ActiveReg(),str_count-1)
+#elif defined(ARCH_I8085)
+                                    emit("\tlxi %c,lit_%d\n",ActiveReg(),str_count-1)
+#endif
                                   : emit("\t%s\n",id);
                         return;
                 } break;
@@ -259,7 +334,11 @@ void expr()
                 case TOK_EXTERN:
                 {
                         next();
+#if defined(ARCH_I386)
                         emit("\textern %s\n",id);
+#elif defined(ARCH_I8085)
+                        synerr("Can't use extern for this architecture");
+#endif
                         skip_til(')');
                 } break;
                 
@@ -268,6 +347,7 @@ void expr()
                         get_start_end();
                         get_args();
 
+#if defined(ARCH_I386)
                         emit("\ttest eax,eax\n");
                         emit("\tjnz L%d\n", start);
                         use_eax = 1;
@@ -278,13 +358,15 @@ void expr()
                         emit("L%d:\n", start);
                         emit("\tmov eax,1\n");
                         emit("L%d:\n", end);
+#elif defined(ARCH_I8085)
+#endif
                 } break;
 
                 case TOK_CHAIN:
                 {
                         get_start_end();
                         get_args();
-
+#if defined(ARCH_I386)
                         emit("\ttest eax,eax\n");
                         emit("\tjz L%d\n", start);
                         use_eax = 1;
@@ -296,95 +378,138 @@ void expr()
                         emit("L%d:\n", start);
                         emit("\tmov eax,0\n");
                         emit("L%d:\n", end);
+#elif defined(ARCH_I8085)
+#endif
                 } break;
 
                 case TOK_LEQ:
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
                         emit("\tsetle al\n");
                         emit("\tmovzx eax,al\n");
+#elif defined(ARCH_I8085)
+#endif
                 } break;
 
                 case TOK_GEQ:
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
                         emit("\tsetge al\n");
                         emit("\tmovzx eax,al\n");
+#elif defined(ARCH_I8085)
+#endif
                 } break;
 
                 case '<':
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
                         emit("\tsetl al\n");
                         emit("\tmovzx eax,al\n");
+#elif defined(ARCH_I8085)
+#endif
                 } break;
 
                 case '>':
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
                         emit("\tsetg al\n");
                         emit("\tmovzx eax,al\n");
+#elif defined(ARCH_I8085)
+#endif
                 } break;
 
                 case TOK_EQ:
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
                         emit("\tsete al\n");
                         emit("\tmovzx eax,al\n");
+#elif defined(ARCH_I8085)
+                        get_start_end();
+                        emit("\tsub b\n");
+                        emit("\tjz %s_M%d\n",current_function,start);
+                        emit("\tmvi a,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmvi a,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
+#endif
                 } break;
 
                 case TOK_NEQ:
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
                         emit("\tsub eax,ebx\n");
                         emit("\tcmp eax,0\n");
                         emit("\tsetne al\n");
                         emit("\tmovzx eax,al\n");
+#elif defined(ARCH_I8085)
+                        get_start_end();
+                        emit("\tsub b\n");
+                        emit("\tjz %s_M%d\n",current_function,start);
+                        emit("\tmvi a,1\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmvi a,0\n");
+                        emit("\t%s_M%d:\n",current_function,end);
+#endif
                 } break;
 
                 case TOK_WHILE:
                 {
                         get_start_end();
-                        emit(".M%d:\n",start);
+                        emit("%s_M%d:\n",current_function,start);
                         expr();
+#if defined(ARCH_I386)
                         emit("\ttest eax,eax\n");
-                        emit("\tjz .M%d\n",end);
+                        emit("\tjz %s_M%d\n",current_function,end);
+#elif defined(ARCH_I8085)
+                        emit("\tmov b,a\n");
+                        emit("\tana b\n");
+                        emit("\tjz %s_M%d\n",current_function,end);
+#endif
                         body();
-                        emit("\tjmp .M%d\n",start);
-                        emit(".M%d:\n",end);
+                        emit("\tjmp %s_M%d\n",current_function,start);
+                        emit("%s_M%d:\n",current_function,end);
                         return;
                 } break;
-
-                //case TOK_BREAK:
-                //{
-                //        emit("\tjmp .M%d\n",m-2);
-                //} break;
 
                 case TOK_IF:
                 {
                         get_start_end();
-                        emit(".M%d:\n",start);
+                        emit("%s_M%d:\n",current_function,start);
                         expr();
+#if defined(ARCH_I386)
                         emit("\ttest eax,eax\n");
-                        emit("\tjz .M%d\n",end);
+                        emit("\tjz %s_M%d\n",current_function,end);
+#elif defined(ARCH_I8085)
+                        emit("\tmov b,a\n");
+                        emit("\tana b\n");
+                        emit("\tjz %s_M%d\n",current_function,end);
+#endif
                         body();
-                        emit(".M%d:\n",end);
+                        emit("%s_M%d:\n",current_function,end);
                 } break;
 
                 case TOK_IDE:
@@ -393,7 +518,11 @@ void expr()
                 } break;
 
                 case ',':
+#if defined(ARCH_I386)
                         emit("\tpush eax\n");
+#elif defined(ARCH_I8085)
+                        emit("\tpush psw\n");
+#endif
                 case ';':
                 {
                         use_eax = 1;
@@ -408,71 +537,117 @@ void expr()
                                 VARIABLE * var = gvar(id);
                                 if (is_ptr)
                                         synerr("syntax error, what did you even do? &*VARIABLE what the fuck");
-                                emit("\tlea eax,[ebp-%d] \n",var->bpoff);
+#if defined(ARCH_I386)
+                                emit("\tlea eax,[ebp-%d]\n",var->bpoff);
+#elif defined(ARCH_I386)
+                                emit("\tmov a,l\n"); /* we will put SP at 0xFF on startup */
+                                emit("\tsub a,\n",var->bpoff);
+#endif
                                 PopID();
                                 return;
                         }
 
                         expr();
+#if defined(ARCH_I386)
                         emit("\tand eax,ebx\n");
+#elif defined(ARCH_I386)
+                        emit("\tana b\n");
+#endif
                 } break;
 
                 case '*':
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
                         (is_start()) ? emit("\tmov eax,[eax]\n")
                                      : emit("\timul eax,ebx\n");
+#else
+                        (is_start()) ? emit("\tpush h\n"),
+                                       emit("\tlxi h,0\n"),
+                                       emit("\tmov l,a\n"),
+                                       emit("\tmov a,m\n"),
+                                       emit("\tpop h\n")
+                                     : synerr("Architecture does not support multiplication.");
+#endif
                 } break;
 
                 case '/':
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
+
                         emit("\tcdq\n");
                         emit("\tidiv ebx\n");
+#else
+                        synerr("Architecture does not support division.");
+#endif
                 } break;
 
                 case '%':
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
                         emit("\tcdq\n");
                         emit("\tidiv ebx\n");
                         emit("\tmov eax,edx\n");
+#else
+                        synerr("Architecture does not support division (modulo).");
+#endif
                 } break;
 
                 case '|':
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
                         emit("\tor eax,ebx\n");
+#elif defined(ARCH_I8085)
+                        emit("\tora b\n");
+#endif
                 } break;
 
                 case '^':
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
                         emit("\txor eax,ebx\n");
+#elif defined(ARCH_I8085)
+                        emit("\txra b\n");
+#endif
                 } break;
 
                 case '~':
                 {
                         expr();
+#if defined(ARCH_I386)
                         emit("\tnot eax\n");
+#elif defined(ARCH_I8085)
+                        emit("\tcma\n");
+#endif
                 } break;
 
                 case '!':
                 {
                         expr();
+#if defined(ARCH_I386)
                         emit("\txor eax,1\n");
                         emit("\tand eax,1\n");
+#elif defined(ARCH_I8085)
+                        emit("\txri 1\n");
+                        emit("\tani 1\n");
+#endif
                 } break;
 
                 case TOK_RETURN:
                 {
                         expr();
-                        emit("\tjmp .exit\n");
+#if defined(ARCH_I386) || defined(ARCH_I8085)
+                        emit("\tjmp %s_exit\n",current_function);
+#endif
                         return;
                 } break;
 
@@ -485,14 +660,22 @@ void expr()
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
                         emit("\tadd eax,ebx\n");
+#elif defined(ARCH_I8085)
+                        emit("\tadd b\n");
+#endif
                 } break;
 
                 case '-':
                 {
                         get_args();
                         expr();
+#if defined(ARCH_I386)
                         emit("\tsub eax,ebx\n");
+#elif defined(ARCH_I8085)
+                        emit("\tsub b\n");
+#endif
                 } break;
 
                 case ')': break;

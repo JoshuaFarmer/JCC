@@ -11,3 +11,8 @@ shorts, integers, chars and pointers<br>
 return<br>
 No error correction and NO warnings<br>
 also no return types<br>
+
+TARGETS:<br>
+i386 100% *<br>
+i8085 50% *<br>
+Astro-8 0%

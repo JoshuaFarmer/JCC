@@ -31,23 +31,33 @@ void compiler(char * srcp, char * outp)
 
         if (!is_included)
         {
-                emit("\tsection .text\n");
-                emit("\tglobal main\n");
-#ifdef ARCH_I386_JDECL
+#if !defined(ARCH_I8085)
+        emit("\tsection .text\n");
+        emit("\tglobal main\n");
+        #if defined(CALL_JDECL) && defined(ARCH_I386)
                 emit("\tglobal _start\n");
                 emit("_start:\n");
                 emit("\tcall main\n");
                 emit("\tmov ebx,eax\n");
                 emit("\tmov eax,1\n");
                 emit("\tint 0x80\n");
+        #endif
+#elif defined(ARCH_I8085)
+        emit("_start:\n");
+        emit("\tlxi h,0xff\n");
+        emit("\tsphl\n");
+        emit("\tcall main\n");
+        emit("inf:\n");
+        emit("\tjmp inf\n");
 #endif
         }
         while (*src)
         {
                 expr();
         }
-
+#ifndef ARCH_I8085
         emit("\tsection .data\n");
+#endif
         STRING * x = strings.next;
         int c=0;
         while (x)
@@ -61,8 +71,10 @@ void compiler(char * srcp, char * outp)
                 x = x->next;
         }
 
+#ifndef ARCH_I8085
         if (is_included)
                 emit("\tsection .text\n");
+#endif
         clean();
 	free(bf);
 	fclose(sf);

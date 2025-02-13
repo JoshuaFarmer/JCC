@@ -101,9 +101,19 @@ void mov_exx_variable(VARIABLE * var)
 {
         switch (var->size)
         {
+#if defined(ARCH_I386)
                 case 4:emit("\tmov e%cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
                 case 2:emit("\tmov %cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
                 case 1:emit("\tmov %cl,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
+#elif defined(ARCH_I8085)
+                case 4:
+                case 2:
+                case 1:emit("\tlxi d,%d ; %d\n",(unsigned char)(char)(-var->bpoff),(char)(-var->bpoff));
+                       emit("\tdad d\n");
+                       emit("\tmov %c,m\n",(use_eax)?'a':'b');
+                       emit("\tlxi d,%d\n",(var->bpoff));
+                       emit("\tdad d\n");
+#endif
         }
         use_eax=0;
 }
@@ -118,9 +128,19 @@ void mov_variable_exx(VARIABLE * var)
 
         switch (var->size)
         {
+#if defined(ARCH_I386)
                 case 4:emit("\tmov [ebp-%d],eax\n",var->bpoff); break;
                 case 2:emit("\tmov [ebp-%d],ax\n",var->bpoff); break;
                 case 1:emit("\tmov [ebp-%d],al\n",var->bpoff); break;
+#elif defined(ARCH_I8085)
+                case 4:
+                case 2:
+                case 1:emit("\tlxi d,%d; %d\n",(unsigned char)(char)(-var->bpoff),(char)(-var->bpoff));
+                       emit("\tdad d\n");
+                       emit("\tmov m,%c\n",(use_eax)?'a':'b');
+                       emit("\tlxi d,%d\n",(var->bpoff));
+                       emit("\tdad d\n");
+#endif
         }
         var->used = true;
 }

@@ -16,6 +16,7 @@ uint8_t  id_stack_ptr = 0;
 int      str_count=0;
 STRING   strings = {.next=NULL,.text=""};
 STACK    stck;
+char     current_function[sizeof(id)];
 
 bool ConstIsAssignable(VARIABLE * var)
 {

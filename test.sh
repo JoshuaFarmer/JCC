@@ -20,3 +20,10 @@ for file in tests/src/*.c; do
     "./tests/exe/${base}_c"
     echo "$file (CDECL) RETURN CODE: $?"
 done
+
+# I8085 Compilation
+for file in tests/src/*.c; do
+    base=$(basename "$file" .c)
+    ./bin/jcc-i85 "$file" -o "tests/s/${base}_8085.s"
+done
+
