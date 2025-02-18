@@ -94,6 +94,46 @@ void declare_function_args()
         }
 }
 
+#elif defined(ARCH_CISC)
+void declare_function_args()
+{
+        int c=0;
+        int start = 4;
+        char * tmp = src;
+        int tokt = tok;
+        char tid[sizeof(id)];
+        strcpy(tid,id);
+
+        while (*src && tok && tok != ')')
+        {
+                if (tok == TOK_IDE)
+                {
+                        start += 2;
+                }
+                next();
+        }
+
+        src = tmp;
+        tok = tokt;
+        strcpy(id,tid);
+        bpoff = -start-4;
+        while (*src && tok && tok != ')')
+        {
+                if (tok == TOK_IDE)
+                {
+                        VARIABLE *x = cvar(TYPE_INT, id, c);
+                        x->used=1;
+                        c = 0;
+                }
+                else if (tok == TOK_CONST)
+                {
+                        c = 1;
+                }
+                next();
+        }
+        bpoff = 4;
+}
+
 #elif defined(ARCH_I8086)
 void declare_function_args()
 {
@@ -193,6 +233,8 @@ int call_function_args()
         emit("\tpush eax\n");
 #elif defined(ARCH_I8086)
         emit("\tpush ax\n");
+#elif defined(ARCH_CISC)
+        emit("\tpush a\n");
 #endif
         emitting = true;
         return c;
@@ -239,7 +281,7 @@ void HandleIdentifier()
                 clean_vars();
                 emit("\tpush ebp\n");
                 emit("\tmov ebp,esp\n");
-#elif defined(ARCH_I8086)
+#elif defined(ARCH_I8086)||defined(ARCH_CISC)
                 clean_vars();
                 emit("\tpush bp\n");
                 emit("\tmov bp,sp\n");
@@ -255,7 +297,7 @@ void HandleIdentifier()
                 emit("\tmov esp,ebp\n");
                 emit("\tpop ebp\n");
                 emit("\tret\n");
-#elif defined(ARCH_I8086)
+#elif defined(ARCH_I8086)||defined(ARCH_CISC)
                 emit("%s_exit:\n",current_function);
                 emit("\tmov sp,bp\n");
                 emit("\tpop bp\n");
@@ -272,6 +314,9 @@ void HandleIdentifier()
 #if defined(ARCH_I386)
                 emit("\tcall %s\n",nam);
                 emit("\tadd esp,%d\n",4*argc);
+#elif defined(ARCH_CISC)
+                emit("\tcall %s\n",nam);
+                emit("\tadd sp,%d\n",4*argc);
 #elif defined(ARCH_I8086)
                 emit("\tcall %s\n",nam);
                 emit("\tadd sp,%d\n",2*argc);
@@ -303,6 +348,8 @@ void expr()
                         emit("\tmov e%cx,%d\n",ActiveReg(),num);
 #elif defined(ARCH_I8086)
                         emit("\tmov %cx,%d\n",ActiveReg(),num);
+#elif defined(ARCH_CISC)
+                        emit("\tmov %c,%d\n",ActiveReg(),num);
 #elif defined(ARCH_I8085)
                         emit("\tmvi %c,%d\n",ActiveReg(),num);
 #endif
@@ -324,6 +371,8 @@ void expr()
                                     emit("\tmov e%cx,lit_%d\n",ActiveReg(),str_count-1)
 #elif defined(ARCH_I8086)
                                     emit("\tmov %cx,lit_%d\n",ActiveReg(),str_count-1)
+#elif defined(ARCH_CISC)
+                                    emit("\tmov %c,lit_%d\n",ActiveReg(),str_count-1)
 #elif defined(ARCH_I8085)
                                     emit("\tlxi %c,lit_%d\n",ActiveReg(),str_count-1)
 #endif
@@ -386,6 +435,17 @@ void expr()
                         emit("L%d:\n", start);
                         emit("\tmov eax,1\n");
                         emit("L%d:\n", end);
+#elif defined(ARCH_CISC)
+                        emit("\ttest a,a\n");
+                        emit("\tjnz L%d\n", start);
+                        use_eax = 1;
+                        expr();
+                        emit("\ttest a,a\n");
+                        emit("\tjnz L%d\n", start);
+                        emit("\tjmp L%d\n", end);
+                        emit("L%d:\n", start);
+                        emit("\tmov a,1\n");
+                        emit("L%d:\n", end);
 #elif defined(ARCH_I8086)
                         emit("\ttest ax,ax\n");
                         emit("\tjnz L%d\n", start);
@@ -417,6 +477,18 @@ void expr()
                         emit("L%d:\n", start);
                         emit("\tmov eax,0\n");
                         emit("L%d:\n", end);
+#elif defined(ARCH_CISC)
+                        emit("\ttest a,a\n");
+                        emit("\tjz L%d\n", start);
+                        use_eax = 1;
+                        expr();
+                        emit("\ttest a,a\n");
+                        emit("\tjz L%d\n", start);
+                        emit("\tmov a,1\n");
+                        emit("\tjmp L%d\n", end);
+                        emit("L%d:\n", start);
+                        emit("\tmov a,0\n");
+                        emit("L%d:\n", end);
 #elif defined(ARCH_I8086)
                         emit("\ttest ax,ax\n");
                         emit("\tjz L%d\n", start);
@@ -442,6 +514,15 @@ void expr()
                         emit("\tcmp eax,0\n");
                         emit("\tsetle al\n");
                         emit("\tmovzx eax,al\n");
+#elif defined(ARCH_CISC)
+                        get_start_end();
+                        emit("\tsub a,b\n");
+                        emit("\tjle %s_M%d\n",current_function,start);
+                        emit("\tmov a,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmov a,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
 #elif defined(ARCH_I8086)
                         get_start_end();
                         emit("\tsub ax,bx\n");
@@ -465,6 +546,15 @@ void expr()
                         emit("\tcmp eax,0\n");
                         emit("\tsetge al\n");
                         emit("\tmovzx eax,al\n");
+#elif defined(ARCH_CISC)
+                        get_start_end();
+                        emit("\tsub a,b\n");
+                        emit("\tjge %s_M%d\n",current_function,start);
+                        emit("\tmov a,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmov a,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
 #elif defined(ARCH_I8086)
                         get_start_end();
                         emit("\tsub ax,bx\n");
@@ -488,6 +578,15 @@ void expr()
                         emit("\tcmp eax,0\n");
                         emit("\tsetl al\n");
                         emit("\tmovzx eax,al\n");
+#elif defined(ARCH_CISC)
+                        get_start_end();
+                        emit("\tsub a,b\n");
+                        emit("\tjl %s_M%d\n",current_function,start);
+                        emit("\tmov a,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmov a,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
 #elif defined(ARCH_I8086)
                         get_start_end();
                         emit("\tsub ax,bx\n");
@@ -511,6 +610,15 @@ void expr()
                         emit("\tcmp eax,0\n");
                         emit("\tsetg al\n");
                         emit("\tmovzx eax,al\n");
+#elif defined(ARCH_CISC)
+                        get_start_end();
+                        emit("\tsub a,b\n");
+                        emit("\tjg %s_M%d\n",current_function,start);
+                        emit("\tmov a,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmov a,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
 #elif defined(ARCH_I8086)
                         get_start_end();
                         emit("\tsub ax,bx\n");
@@ -534,6 +642,15 @@ void expr()
                         emit("\tcmp eax,0\n");
                         emit("\tsete al\n");
                         emit("\tmovzx eax,al\n");
+#elif defined(ARCH_CISC)
+                        get_start_end();
+                        emit("\tsub a,b\n");
+                        emit("\tjz %s_M%d\n",current_function,start);
+                        emit("\tmov a,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmov a,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
 #elif defined(ARCH_I8085)
                         get_start_end();
                         emit("\tsub b\n");
@@ -566,6 +683,15 @@ void expr()
                         emit("\tcmp eax,0\n");
                         emit("\tsetne al\n");
                         emit("\tmovzx eax,al\n");
+#elif defined(ARCH_CISC)
+                        get_start_end();
+                        emit("\tsub a,b\n");
+                        emit("\tjnz %s_M%d\n",current_function,start);
+                        emit("\tmov a,0\n");
+                        emit("\tjmp %s_M%d\n",current_function,end);
+                        emit("\t%s_M%d:\n",current_function,start);
+                        emit("\tmov a,1\n");
+                        emit("\t%s_M%d:\n",current_function,end);
 #elif defined(ARCH_I8085)
                         get_start_end();
                         emit("\tsub b\n");
@@ -604,6 +730,9 @@ void expr()
 #elif defined(ARCH_I8086)
                         emit("\ttest ax,ax\n");
                         emit("\tjz %s_M%d\n",current_function,end);
+#elif defined(ARCH_CISC)
+                        emit("\ttest a,a\n");
+                        emit("\tjz %s_M%d\n",current_function,end);
 #else
                         synerr("WHILE Is not supported by this architecture");
 #endif
@@ -628,6 +757,9 @@ void expr()
 #elif defined(ARCH_I8086)
                         emit("\ttest ax,ax\n");
                         emit("\tjz %s_M%d\n",current_function,end);
+#elif defined(ARCH_CISC)
+                        emit("\ttest a,a\n");
+                        emit("\tjz %s_M%d\n",current_function,end);
 #else
                         synerr("IF Is not supported by this architecture");
 #endif
@@ -645,6 +777,8 @@ void expr()
                         emit("\tpush eax\n");
 #elif defined(ARCH_I8086)
                         emit("\tpush ax\n");
+#elif defined(ARCH_CISC)
+                        emit("\tpush a\n");
 #endif
                 case ';':
                 {
@@ -666,6 +800,8 @@ void expr()
                                 emit("\tlea %cx,[ebp-%d]\n",ActiveReg(),var->bpoff);
 #elif defined(ARCH_I386)
                                 emit("\tmvi a,\n",(var->bpoff)-(0xFFFF - 0xFF));
+#elif defined(ARCH_CISC)
+                                emit("\tlea %c,[ebp-%d]\n",ActiveReg(),var->bpoff);
 #else
                         synerr("ADDR OF Is not supported by this architecture");
 #endif
@@ -677,8 +813,10 @@ void expr()
 #if defined(ARCH_I386)
                         emit("\tand eax,ebx\n");
 #elif defined(ARCH_I8086)
-                        emit("\tand eax,ebx\n");
-#elif defined(ARCH_I386)
+                        emit("\tand ax,bx\n");
+#elif defined(ARCH_CISC)
+                        emit("\tand a,b\n");
+#elif defined(ARCH_I8085)
                         emit("\tana b\n");
 #endif
                 } break;
@@ -693,7 +831,10 @@ void expr()
 #elif defined(ARCH_I8086)
                         (is_start()) ? emit("\tmov ax,[ax]\n")
                                      : emit("\timul ax,bx\n");
-#elif defined(ARCH_I8086)
+#elif defined(ARCH_CISC)
+                        (is_start()) ? emit("\tmov a,[a]\n")
+                                     : emit("\tmul a,b\n");
+#elif defined(ARCH_I8085)
                         (is_start()) ? emit("\tmvi h,255\n"),
                                        emit("\tmov l,a\n"),
                                        emit("\tmov a,m\n")
@@ -706,11 +847,12 @@ void expr()
                         get_args();
                         expr();
 #if defined(ARCH_I386)
-
                         emit("\tcdq\n");
                         emit("\tidiv ebx\n");
 #elif defined(ARCH_I8086)
                         emit("\tidiv bx\n");
+#elif defined(ARCH_CISC)
+                        emit("\tdiv a,b\n");
 #else
                         synerr("Architecture does not support division.");
 #endif
@@ -724,6 +866,9 @@ void expr()
                         emit("\tcdq\n");
                         emit("\tidiv ebx\n");
                         emit("\tmov eax,edx\n");
+#elif defined(ARCH_CISC)
+                        emit("\tdiv a,b\n");
+                        emit("\tmov a,d\n");
 #elif defined(ARCH_I8086)
                         emit("\tidiv bx\n");
                         emit("\tmov ax,dx\n");
@@ -742,6 +887,8 @@ void expr()
                         emit("\tor ax,bx\n");
 #elif defined(ARCH_I8085)
                         emit("\tora b\n");
+#elif defined(ARCH_CISC)
+                        emit("\tor a,b\n");
 #endif
                 } break;
 
@@ -755,6 +902,8 @@ void expr()
                         emit("\txor ax,bx\n");
 #elif defined(ARCH_I8085)
                         emit("\txra b\n");
+#elif defined(ARCH_CISC)
+                        emit("\txor a,b\n");
 #endif
                 } break;
 
@@ -767,6 +916,8 @@ void expr()
                         emit("\tnot ax\n");
 #elif defined(ARCH_I8085)
                         emit("\tcma\n");
+#elif defined(ARCH_CISC)
+                        emit("\tnot a\n");
 #endif
                 } break;
 
@@ -782,6 +933,9 @@ void expr()
 #elif defined(ARCH_I8085)
                         emit("\txri 1\n");
                         emit("\tani 1\n");
+#elif defined(ARCH_CISC)
+                        emit("\txorb a,1\n");
+                        emit("\tandb a,1\n");
 #endif
                 } break;
 
@@ -809,6 +963,8 @@ void expr()
                         emit("\tadd ax,bx\n");
 #elif defined(ARCH_I8085)
                         emit("\tadd b\n");
+#elif defined(ARCH_CISC)
+                        emit("\tadd a,b\n");
 #endif
                 } break;
 
@@ -822,6 +978,8 @@ void expr()
                         emit("\tsub ax,bx\n");
 #elif defined(ARCH_I8085)
                         emit("\tsub b\n");
+#elif defined(ARCH_CISC)
+                        emit("\tsub a,b\n");
 #endif
                 } break;
 

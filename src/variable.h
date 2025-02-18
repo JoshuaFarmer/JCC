@@ -44,6 +44,9 @@ VARIABLE * cvar(TYPE type, char * name, int is_const)
 #if defined(ARCH_I8086)
         if (bpoff > 0)
                 emit("\tsub sp,2\n");
+#elif defined(ARCH_CISC)
+        if (bpoff > 0)
+                emit("\tsub sp,4\n");
 #endif
         int size = SIZEOF(type);
         //fprintf(fo,"\tsub esp,%d\n",size);
@@ -59,6 +62,8 @@ VARIABLE * cvar(TYPE type, char * name, int is_const)
         list.next=new;
 #if defined(ARCH_I386) || defined(ARCH_I8086)
         bpoff += size;
+#elif defined(ARCH_CISC)
+        bpoff += 4;
 #elif defined(ARCH_I8085)
         bpoff -= size;
 #endif
@@ -117,6 +122,10 @@ void mov_exx_variable(VARIABLE * var)
                 case 4:emit("\tmov e%cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
                 case 2:emit("\tmov %cx,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
                 case 1:emit("\tmov %cl,[ebp-%d]\n",(use_eax)?'a':'b',var->bpoff); break;
+#elif defined(ARCH_CISC)
+                case 4:emit("\tmov %c,[bp%c%d]\n",(use_eax)?'a':'b',(var->bpoff > 0) ? '-' : '+',abs(var->bpoff)); break;
+                case 2:emit("\tmovw %c,[bp%c%d]\n",(use_eax)?'a':'b',(var->bpoff > 0) ? '-' : '+',abs(var->bpoff)); break;
+                case 1:emit("\tmovb %c,[bp%c%d]\n",(use_eax)?'a':'b',(var->bpoff > 0) ? '-' : '+',abs(var->bpoff)); break;
 #elif defined(ARCH_I8086)
                 case 4:
                 case 2:emit("\tmov %cx,[bp%c%d]\n",(use_eax)?'a':'b',(var->bpoff > 0) ? '-' : '+',abs(var->bpoff)); break;
@@ -154,6 +163,10 @@ void mov_variable_exx(VARIABLE * var)
                 case 4:emit("\tmov [ebp-%d],eax\n",var->bpoff); break;
                 case 2:emit("\tmov [ebp-%d],ax\n",var->bpoff); break;
                 case 1:emit("\tmov [ebp-%d],al\n",var->bpoff); break;
+#elif defined(ARCH_CISC)
+                case 4:emit("\tmov [bp%c%d],a\n",(var->bpoff > 0) ? '-' : '+',abs(var->bpoff)); break;
+                case 2:emit("\tmovw [bp%c%d],a\n",(var->bpoff > 0) ? '-' : '+',abs(var->bpoff)); break;
+                case 1:emit("\tmovb [bp%c%d],a\n",(var->bpoff > 0) ? '-' : '+',abs(var->bpoff)); break;
 #elif defined(ARCH_I8086)
                 case 4:
                 case 2:emit("\tmov [bp%c%d],ax\n",(var->bpoff > 0) ? '-' : '+',abs(var->bpoff)); break;

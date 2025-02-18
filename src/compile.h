@@ -66,13 +66,18 @@ void compiler(char * srcp, char * outp)
         emit("\thlt\n");
         emit("\tjmp inf\n");
         bpoff = 0xFFFF;
+#elif defined(ARCH_CISC)
+        emit("_start:\n");
+        emit("\tmov sp,8192\n");
+        emit("\tcall main\n");
+        emit("\thlt\n");
 #endif
         }
         while (*src)
         {
                 expr();
         }
-#ifndef ARCH_I8085
+#if !defined(ARCH_I8085) && !defined(ARCH_CISC)
         emit("\tsection .data\n");
 #endif
         STRING * x = strings.next;
@@ -88,9 +93,11 @@ void compiler(char * srcp, char * outp)
                 x = x->next;
         }
 
-#ifndef ARCH_I8085
+#if !defined(ARCH_I8085) && !defined(ARCH_CISC)
         if (is_included)
                 emit("\tsection .text\n");
+#elif defined(ARCH_CISC)
+        emit("\t; end of file");
 #endif
         clean();
 	free(bf);

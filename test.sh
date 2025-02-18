@@ -1,3 +1,5 @@
+echo "i386-jdecl"
+
 # JDECL Compilation
 for file in tests/src/*.c; do
     base=$(basename "$file" .c)
@@ -12,6 +14,8 @@ for file in tests/src/*.c; do
     echo "$file (JDECL) RETURN CODE: $?"
 done
 
+echo "i386-cdecl"
+
 # CDECL Compilation
 for file in tests/src/*.c; do
     base=$(basename "$file" .c)
@@ -21,3 +25,13 @@ for file in tests/src/*.c; do
     "./tests/exe/${base}_c"
     echo "$file (CDECL) RETURN CODE: $?"
 done
+
+echo "cisc"
+
+# custom cpu compilation
+for file in tests/src/*.c; do
+    base=$(basename "$file" .c)
+    ./bin/jcc-cisc "$file" -o "tests/s/${base}_cisc.s"
+    echo "compiled $file"
+done
+
