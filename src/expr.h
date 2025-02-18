@@ -719,6 +719,7 @@ void expr()
                 {
                         get_start_end();
                         emit("%s_M%d:\n",current_function,start);
+                        use_eax=1;
                         expr();
 #if defined(ARCH_I386)
                         emit("\ttest eax,eax\n");
@@ -746,6 +747,7 @@ void expr()
                 {
                         get_start_end();
                         emit("%s_M%d:\n",current_function,start);
+                        use_eax=1;
                         expr();
 #if defined(ARCH_I386)
                         emit("\ttest eax,eax\n");
@@ -986,6 +988,7 @@ void expr()
                 case ')': break;
                 case '(':
                 {
+                        use_eax = 1;
                         while (tok != ')')
                         {
                                 expr();
