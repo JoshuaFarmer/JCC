@@ -36,6 +36,8 @@ void clean_vars()
         bpoff = 4;
 #elif defined(ARCH_I8085)
         bpoff = 0xFFFF;
+#elif defined(ARCH_CISC)
+        bpoff = 4;
 #endif
 }
 
