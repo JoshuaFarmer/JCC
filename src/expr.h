@@ -108,7 +108,7 @@ void declare_function_args()
         {
                 if (tok == TOK_IDE)
                 {
-                        start += 2;
+                        start += 4;
                 }
                 next();
         }

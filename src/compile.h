@@ -84,7 +84,7 @@ void compiler(char * srcp, char * outp)
         int c=0;
         while (x)
         {
-                emit("lit_%d: db ",c++);
+                emit("lit_%d:\ndb ",c++);
                 for (int i = 0; i < strlen(x->text); ++i)
                 {
                         emit("%d, ", x->text[i]);
